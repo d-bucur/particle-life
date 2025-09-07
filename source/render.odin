@@ -6,10 +6,6 @@ particle_size :: 5
 color_map := [?]rl.Color{rl.RED, rl.YELLOW, rl.GREEN}
 
 render_scene :: proc(scene: Scene) {
-	rl.BeginDrawing()
-	defer rl.EndDrawing()
-	// try fade out effect
-	rl.ClearBackground(rl.DARKGRAY)
 	defer rl.DrawFPS(0, 0)
 
 	for p in scene.particles {

@@ -5,24 +5,30 @@ import "core:fmt"
 import "core:log"
 import rl "vendor:raylib"
 
-run: bool
-scene: Scene
+_run: bool
+_scene: Scene
 
 init :: proc() {
-	run = true
+	_run = true
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
-	scene = Scene {
+	_scene = Scene {
 		size = {1024, 600},
 	}
-	rl.InitWindow(i32(scene.size.x), i32(scene.size.y), "Particle life")
-	init_scene_rand(&scene)
+	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
+	init_scene_rand(&_scene)
 }
 
 update :: proc() {
-	update_scene(&scene)
 	// log.info("log.info works!")
 	// fmt.println("fmt.println too.")
-	render_scene(scene)
+
+	rl.BeginDrawing()
+	defer rl.EndDrawing()
+	// try fade out effect
+	rl.ClearBackground(rl.DARKGRAY)
+
+	update_scene(&_scene, rl.GetFrameTime())
+	render_scene(_scene)
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)
@@ -42,9 +48,9 @@ should_run :: proc() -> bool {
 	when ODIN_OS != .JS {
 		// Never run this proc in browser. It contains a 16 ms sleep on web!
 		if rl.WindowShouldClose() {
-			run = false
+			_run = false
 		}
 	}
 
-	return run
+	return _run
 }
