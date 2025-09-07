@@ -18,13 +18,16 @@ Particle :: struct {
 	cluster: i32,
 }
 
-max_colors :: 3
+max_particles :: 300
+max_clusters :: 4
 Scene :: struct {
 	// turn into soa later
-	particles: [100]Particle,
-	weights:   [max_colors][max_colors]f32,
+	particles: [max_particles]Particle,
+	weights:   [max_clusters][max_clusters]f32,
 	size:      Vec2,
 	params:    SimParams,
+	speed:     f32,
+	color_map: [max_clusters]rl.Color,
 }
 
 SimParams :: struct {
@@ -38,18 +41,19 @@ SimParams :: struct {
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
+	scene.speed = 1
 	scene.params = {
 		friction        = 0.5, // actually inverted: higher value means less friction
-		force_mult      = 0.2,
+		force_mult      = 0.1,
 		dist_attraction = 10000,
 		dist_max        = 40000,
-		peak_repulsion  = -1,
+		peak_repulsion  = -2,
 		peak_attraction = 1,
 		cutoff_force    = 0,
 	}
 	for &p in scene.particles {
 		using p
-		cluster = rand.int31_max(max_colors)
+		cluster = rand.int31_max(max_clusters)
 		pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
 		vel = {rand.float32() * 1, rand.float32() * 1}
 	}
@@ -59,11 +63,16 @@ init_scene_rand :: proc(scene: ^Scene) {
 			// v = 1 if i == j else -1
 		}
 	}
+	golden_ratio := (math.sqrt_f32(5) + 1) / 2
+	for &color, i in scene.color_map {
+		hue: f32 = math.remainder(f32(i) * golden_ratio, 1)
+		color = rl.ColorFromHSV(hue * 360, 0.7, 1)
+	}
 }
 
 update_scene :: proc(scene: ^Scene, dt: f32) {
 	if dt == 0 do return // nothing to update
-	dt := dt * 100 // avoid rounding errors by staying close to 1
+	dt := dt * 100 * scene.speed // avoid rounding errors by staying close to 1
 
 	for &p, i in &scene.particles {
 		using p
@@ -73,7 +82,7 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 			// TODO optimize calculations
 			delta := distance_wrapped(other.pos, pos, scene.size)
 			len_sqr := la.length2(delta)
-			if len_sqr < 0.01 || len_sqr > scene.params.dist_max do continue
+			if len_sqr > scene.params.dist_max do continue
 			force: f32
 			if (len_sqr) < scene.params.dist_attraction {
 				force = la.lerp(
@@ -90,15 +99,16 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 				)
 			}
 			weight := scene.weights[p.cluster][other.cluster]
-			accel += weight * force * la.normalize(delta)
+			dir := la.normalize(delta) if len_sqr > 0.01 else {0, 1}
+			accel += weight * force * dir
 		}
 		accel *= scene.params.force_mult
 
-		rl.DrawLineV(pos, pos + accel, color_map[cluster])
-		if i == 0 {
-			rl.DrawCircleLinesV(pos, math.sqrt(scene.params.dist_attraction), rl.GREEN)
-			rl.DrawCircleLinesV(pos, math.sqrt(scene.params.dist_max), rl.PURPLE)
-		}
+		// rl.DrawLineV(pos, pos + accel, scene.color_map[cluster])
+		// if i == 0 {
+		// 	rl.DrawCircleLinesV(pos, math.sqrt(scene.params.dist_attraction), rl.GREEN)
+		// 	rl.DrawCircleLinesV(pos, math.sqrt(scene.params.dist_max), rl.PURPLE)
+		// }
 
 		// integrate velocity
 		vel = vel * scene.params.friction + accel * dt // how to use dt in friction?

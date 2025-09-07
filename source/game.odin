@@ -19,13 +19,16 @@ init :: proc() {
 }
 
 update :: proc() {
+	if rl.IsWindowResized() do set_scene_size(rl.GetScreenWidth(), rl.GetScreenHeight())
 	// log.info("log.info works!")
 	// fmt.println("fmt.println too.")
+	if rl.IsKeyPressed(.MINUS) do _scene.speed -= 0.2
+	if rl.IsKeyPressed(.EQUAL) do _scene.speed += 0.2
 
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
 	// try fade out effect
-	rl.ClearBackground(rl.DARKGRAY)
+	rl.ClearBackground(rl.ColorFromHSV(0, 0.1, 0.1))
 
 	update_scene(&_scene, rl.GetFrameTime())
 	render_scene(_scene)
@@ -36,8 +39,13 @@ update :: proc() {
 
 // In a web build, this is called when browser changes size. Remove the
 // `rl.SetWindowSize` call if you don't want a resizable game.
-parent_window_size_changed :: proc(w, h: int) {
+parent_window_size_changed :: proc(w, h: i32) {
 	rl.SetWindowSize(c.int(w), c.int(h))
+	set_scene_size(w, h)
+}
+
+set_scene_size :: proc(w, h: i32) {
+	_scene.size = {f32(w), f32(h)}
 }
 
 shutdown :: proc() {

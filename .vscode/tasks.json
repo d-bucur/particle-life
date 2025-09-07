@@ -30,7 +30,7 @@
         {
             "label": "run web",
             "type": "shell",
-            "command": "./build_web.sh && python3 -m http.server --directory build/web",
+            "command": "./build_web.sh && python3 -m http.server --directory build/web & open http://0.0.0.0:8000/",
             "group": "build"
         },
     ]
