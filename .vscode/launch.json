@@ -1,0 +1,27 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		// adapted from https://gist.github.com/RednibCoding/0c2258213a293a606542be2035846a7d
+		{
+			// works with https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "build-debug",
+			"name": "Debug CPP",
+			"program": "${workspaceFolder}/build/desktop/game_desktop.bin",
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+        {
+			// works with https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
+			// i prefer this one
+            "type": "lldb",
+            "request": "launch",
+            "preLaunchTask": "build-debug",
+            "name": "Debug LLDB",
+            "program": "${workspaceFolder}/build/desktop/game_desktop.bin",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+	]
+}
