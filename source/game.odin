@@ -33,6 +33,7 @@ update :: proc() {
 	// try fade out effect
 	rl.ClearBackground(rl.ColorFromHSV(0, 0.1, 0.1))
 
+	cleanup_particles(&_scene, f32(rl.GetTime()))
 	update_scene(&_scene, rl.GetFrameTime())
 	render_scene(_scene)
 	draw_ui(&_scene)

@@ -4,15 +4,16 @@ import "core:math"
 import la "core:math/linalg"
 import "core:math/rand"
 
-import rl "vendor:raylib" // used for debug
+import rl "vendor:raylib"
 
 Vec2 :: [2]f32
 
 Particle :: struct {
-	pos:     Vec2,
-	vel:     Vec2,
-	accel:   Vec2,
-	cluster: i32,
+	pos:        Vec2,
+	vel:        Vec2,
+	accel:      Vec2,
+	cluster:    i32,
+	birth_time: f32,
 }
 
 max_particles :: 400
@@ -30,27 +31,27 @@ Scene :: struct {
 
 SimParams :: struct {
 	friction:   f32, // actually inverted. higher values means less friction
-	force_mult: f32,
-	dist_max:   f32, // maximum attraction ratio
-	eq_ratio:   f32, // 0..=1 equilibrium distance as percentage from dist_max
+	force_mult: f32, // multiply force by factor
+	dist_max:   f32, // maximum attraction range
+	eq_ratio:   f32, // 0..=1 equilibrium ratio as percentage from dist_max
+	// Not sure I like how this works now
+	life_time:  f32, // after this time the particle will die and a new one will be spawned
 }
 
 init_scene_static :: proc(scene: ^Scene) {
 	scene.speed = 1
-	scene.params = {
+	scene.params = SimParams {
 		friction   = 0.5,
 		force_mult = 0.1,
 		eq_ratio   = 0.3,
 		dist_max   = 200,
+		life_time  = 20,
 	}
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
 	for &p in scene.particles {
-		using p
-		cluster = rand.int31_max(max_clusters)
-		pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
-		vel = {rand.float32() * 1, rand.float32() * 1}
+		randomize_particle(&p, scene^, (rand.float32() - 1) * scene.params.life_time)
 	}
 	fill_rand_weights(scene)
 	golden_ratio := (math.sqrt_f32(5) + 1) / 2
@@ -58,6 +59,13 @@ init_scene_rand :: proc(scene: ^Scene) {
 		hue: f32 = math.remainder(f32(i) * golden_ratio, 1)
 		color = rl.ColorFromHSV(hue * 360, 0.7, 1)
 	}
+}
+
+randomize_particle :: #force_inline proc(p: ^Particle, scene: Scene, time: f32) {
+	p.cluster = rand.int31_max(max_clusters)
+	p.pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
+	p.vel = {rand.float32() * 1, rand.float32() * 1}
+	p.birth_time = time
 }
 
 fill_rand_weights :: proc(scene: ^Scene) {
@@ -140,4 +148,14 @@ wrap_position :: proc(pos: ^Vec2, size: Vec2) {
 	if (pos.x < -margin) do pos.x = size.x + margin
 	if (pos.y > size.y + margin) do pos.y = -margin
 	if (pos.y < -margin) do pos.y = size.y + margin
+}
+
+cleanup_particles :: proc(scene: ^Scene, time: f32) {
+	max_life := scene.params.life_time
+	for &p in scene.particles {
+		life_time := time - p.birth_time
+		if life_time >= max_life {
+			randomize_particle(&p, scene^, time)
+		}
+	}
 }
