@@ -27,6 +27,12 @@ Scene :: struct {
 	params:    SimParams,
 	speed:     f32,
 	color_map: [max_clusters]rl.Color,
+	cached:    Cached,
+}
+
+Cached :: struct {
+	size_half: Vec2,
+	er:        f32,
 }
 
 SimParams :: struct {
@@ -90,6 +96,11 @@ fill_rand_weights :: proc(scene: ^Scene) {
 	}
 }
 
+rebuild_cache :: proc(scene: ^Scene) {
+	scene.cached.size_half = scene.size / 2
+	scene.cached.er = 1 / (1 - scene.params.eq_ratio)
+}
+
 init_scene_test :: proc(scene: ^Scene) {
 	// only works with arrays of size 2
 	// scene.particles = {
@@ -112,8 +123,7 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 		p.accel = {0, 0}
 		for other, j in scene.particles {
 			if i == j do continue
-			// TODO optimize calculations
-			delta := distance_wrapped(other.pos, p.pos, scene.size)
+			delta := distance_wrapped(other.pos, p.pos, scene)
 			l := la.length(delta)
 			delta_norm := delta / l if l > 0.001 else 0
 			r := l / scene.params.dist_max
@@ -123,7 +133,7 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 			if r < eq {
 				force = r / eq - 1
 			} else if r < 1 {
-				force = weight * (1 - math.abs(2 * r - 1 - eq) / (1 - eq))
+				force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
 			} else do continue
 			p.accel += force * delta_norm
 		}
@@ -144,23 +154,24 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	}
 }
 
-distance_wrapped :: proc(a: Vec2, b: Vec2, size: Vec2) -> Vec2 {
-	// need tests for this
+distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 {
 	r := a - b
-	// TODO cache half size
-	if math.abs(r.x) > size.x / 2 do r.x = r.x - math.sign(r.x) * size.x
-	if math.abs(r.y) > size.y / 2 do r.y = r.y - math.sign(r.y) * size.y
+	h := scene.cached.size_half
+	if r.x > h.x do r.x -= scene.size.x
+	else if r.x < -h.x do r.x += scene.size.x
+	if r.y > h.y do r.y -= scene.size.y
+	else if r.y < -h.y do r.y += scene.size.y
 	return r
 }
 
-wrap_position :: proc(pos: ^Vec2, size: Vec2) {
+wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
 	// handle out of bounds
 	// could change to destroy particle
 	margin :: particle_size
 	if (pos.x > size.x + margin) do pos.x = -margin
-	if (pos.x < -margin) do pos.x = size.x + margin
+	else if (pos.x < -margin) do pos.x = size.x + margin
 	if (pos.y > size.y + margin) do pos.y = -margin
-	if (pos.y < -margin) do pos.y = size.y + margin
+	else if (pos.y < -margin) do pos.y = size.y + margin
 }
 
 cleanup_particles :: proc(scene: ^Scene, time: f32) {

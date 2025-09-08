@@ -22,6 +22,7 @@ init :: proc() {
 
 update :: proc() {
 	if rl.IsWindowResized() do set_scene_size(rl.GetScreenWidth(), rl.GetScreenHeight())
+	rebuild_cache(&_scene)
 	// log.info("log.info works!")
 	// fmt.println("fmt.println too.")
 
