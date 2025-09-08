@@ -49,24 +49,33 @@ draw_ui :: proc(scene: ^Scene) {
 	for i in 0 ..< max_clusters {
 		rl.DrawCircleV({sz * 2 + f32(i) * sz, sz}, sz / 3, scene.color_map[i])
 		rl.DrawCircleV({sz, sz * 2 + f32(i) * sz}, sz / 3, scene.color_map[i])
+
 		for j in 0 ..< max_clusters {
 			rect := rl.Rectangle{sz * 1.5 + f32(i) * sz, sz * 1.5 + f32(j) * sz, sz, sz}
-			weight2 := &scene.weights[i][j]
-			weight := i32(weight2^ * 10)
+			weight := &scene.weights[i][j]
+			// weight := i32(weight2^ * 10)
 			color := rl.Fade(
-				rl.ColorFromHSV(linalg.mix(f32(0), 120, (weight2^ + 1) / 2), 0.5, 1),
+				rl.ColorFromHSV(linalg.mix(f32(0), 120, (weight^ + 1) / 2), 0.5, 1),
 				0.6,
 			)
 			rl.DrawRectangleRec(rect, color)
 			rl.DrawRectangleLinesEx(rect, 3, color)
-			if rl.IsMouseButtonDown(.LEFT) &&
-			   rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) {
-				weight2^ = math.min(weight2^ + 0.02, 1)
+
+			// input to change weight values
+			wheel := rl.GetMouseWheelMove()
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) {
+				weight^ = math.max(math.min(weight^ + 0.2 * wheel, 1), -1)
 			}
-			if rl.IsMouseButtonDown(.RIGHT) &&
-			   rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) {
-				weight2^ = math.max(weight2^ - 0.02, -1)
-			}
+
+			// alternative using mouse clicks
+			// if rl.IsMouseButtonDown(.LEFT) &&
+			//    rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) {
+			// 	weight^ = math.min(weight^ + 0.02, 1)
+			// }
+			// if rl.IsMouseButtonDown(.RIGHT) &&
+			//    rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) {
+			// 	weight^ = math.max(weight^ - 0.02, -1)
+			// }
 			// rl.GuiValueBox(rect, "", &weight, -10, 10, false)
 			// scene.weights[i][j] = f32(weight) / 10
 		}
