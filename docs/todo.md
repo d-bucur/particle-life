@@ -1,5 +1,4 @@
 # optimizations
-- optimize force operations
 - spatial map
 - symmetric pass?
 - break operations (separate integration etc)
