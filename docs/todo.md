@@ -7,5 +7,5 @@
 
 # features
 - repeating scene
-- parameters in ui
-- genetic 
+- genetic evolution of weights, collisions to make particles fight etc. should be separate branch
+- better ui

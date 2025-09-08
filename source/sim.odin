@@ -53,8 +53,9 @@ init_scene_rand :: proc(scene: ^Scene) {
 	reserve(&scene.particles, max_particles)
 	fill_rand_weights(scene)
 	golden_ratio := (math.sqrt_f32(5) + 1) / 2
+	offset := rand.float32() * golden_ratio
 	for &color, i in scene.color_map {
-		hue: f32 = math.remainder(f32(i) * golden_ratio, 1)
+		hue: f32 = math.remainder(f32(i) * golden_ratio + offset, 1)
 		color = rl.ColorFromHSV(hue * 360, 0.7, 1)
 	}
 }
