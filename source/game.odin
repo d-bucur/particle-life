@@ -15,7 +15,9 @@ init :: proc() {
 		size = {1024, 600},
 	}
 	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
+	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
+	// init_scene_test(&_scene)
 }
 
 update :: proc() {
@@ -25,6 +27,7 @@ update :: proc() {
 	if rl.IsKeyPressed(.MINUS) do _scene.speed -= 0.2
 	if rl.IsKeyPressed(.EQUAL) do _scene.speed += 0.2
 
+
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
 	// try fade out effect
@@ -32,6 +35,7 @@ update :: proc() {
 
 	update_scene(&_scene, rl.GetFrameTime())
 	render_scene(_scene)
+	draw_ui(&_scene)
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)
