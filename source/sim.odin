@@ -16,12 +16,12 @@ Particle :: struct {
 	birth_time: f32,
 }
 
-max_particles :: 400
+max_particles :: 1000
 max_clusters :: 4
 
 Scene :: struct {
 	// TODO turn into soa later
-	particles: [max_particles]Particle,
+	particles: [dynamic]Particle,
 	weights:   [max_clusters][max_clusters]f32,
 	size:      Vec2,
 	params:    SimParams,
@@ -50,14 +50,26 @@ init_scene_static :: proc(scene: ^Scene) {
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
-	for &p in scene.particles {
-		randomize_particle(&p, scene^, (rand.float32() - 1) * scene.params.life_time)
-	}
+	reserve(&scene.particles, max_particles)
 	fill_rand_weights(scene)
 	golden_ratio := (math.sqrt_f32(5) + 1) / 2
 	for &color, i in scene.color_map {
 		hue: f32 = math.remainder(f32(i) * golden_ratio, 1)
 		color = rl.ColorFromHSV(hue * 360, 0.7, 1)
+	}
+}
+
+resize_particles :: proc(scene: ^Scene, num_particles: int) {
+	diff := num_particles - len(scene.particles)
+	switch {
+	case diff > 0:
+		for i in 0 ..< diff {
+			p := Particle{}
+			randomize_particle(&p, scene^, (rand.float32() - 1) * scene.params.life_time)
+			append(&scene.particles, p)
+		}
+	case diff < 0:
+		resize(&scene.particles, num_particles)
 	}
 }
 

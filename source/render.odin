@@ -1,11 +1,13 @@
 package game
 
+import "core:fmt"
+import "core:strings"
 import rl "vendor:raylib"
 
 particle_size :: 3
 
 render_scene :: proc(scene: Scene) {
-	// defer rl.DrawFPS(i32(scene.size.x / 2), 0)
+	defer rl.DrawFPS(i32(scene.size.x / 2), 0)
 
 	for p in scene.particles {
 		using p
@@ -22,6 +24,16 @@ draw_ui :: proc(scene: ^Scene) {
 	if rl.GuiButton(_layout(6), "Random weights") {
 		fill_rand_weights(scene)
 	}
+
+	if rl.IsKeyPressed(.MINUS) do _target_particle_count -= 50
+	if rl.IsKeyPressed(.EQUAL) do _target_particle_count += 50
+	count := int(_target_particle_count)
+	label := fmt.ctprintf("count: %v", count)
+	rl.GuiSlider(_layout(7), "", label, &_target_particle_count, 2, 1000)
+	if count != len(scene.particles) {
+		resize_particles(scene, count)
+	}
+
 	if rl.IsMouseButtonPressed(.RIGHT) {
 		_scene.particles[0].pos = rl.GetMousePosition()
 	}

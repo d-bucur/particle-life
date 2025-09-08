@@ -1,12 +1,11 @@
 package game
 
 import "core:c"
-import "core:fmt"
-import "core:log"
 import rl "vendor:raylib"
 
 _run: bool
 _scene: Scene
+_target_particle_count : f32 // has to be float to work with raygui
 
 init :: proc() {
 	_run = true
@@ -17,6 +16,7 @@ init :: proc() {
 	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
+	_target_particle_count = 300
 	// init_scene_test(&_scene)
 }
 
@@ -24,9 +24,6 @@ update :: proc() {
 	if rl.IsWindowResized() do set_scene_size(rl.GetScreenWidth(), rl.GetScreenHeight())
 	// log.info("log.info works!")
 	// fmt.println("fmt.println too.")
-	if rl.IsKeyPressed(.MINUS) do _scene.speed -= 0.2
-	if rl.IsKeyPressed(.EQUAL) do _scene.speed += 0.2
-
 
 	rl.BeginDrawing()
 	defer rl.EndDrawing()

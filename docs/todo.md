@@ -6,7 +6,6 @@
 - multithreading on desktop
 
 # features
-- allow changing number of particles
 - repeating scene
 - parameters in ui
 - genetic 
