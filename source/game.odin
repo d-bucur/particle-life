@@ -1,11 +1,16 @@
 package game
 
+import "core:fmt"
 import "core:c"
+import "core:time"
 import rl "vendor:raylib"
 
 _run: bool
 _scene: Scene
-_target_particle_count : f32 // has to be float to work with raygui
+_target_particle_count: f32 // has to be float to work with raygui
+_update_time: f64
+_render_time: f64
+historic :: 0.1
 
 init :: proc() {
 	_run = true
@@ -32,9 +37,19 @@ update :: proc() {
 	rl.ClearBackground(rl.ColorFromHSV(0, 0.1, 0.1))
 
 	cleanup_particles(&_scene, f32(rl.GetTime()))
+	start := time.tick_now()
 	update_scene(&_scene, rl.GetFrameTime())
+	duration := time.duration_microseconds(time.tick_since(start))
+	_update_time = (1 - historic) * _update_time + historic * duration
+
+	start = time.tick_now()
 	render_scene(_scene)
+	duration = time.duration_microseconds(time.tick_since(start))
+	_render_time = (1 - historic) * _render_time + historic * duration
 	draw_ui(&_scene)
+
+	rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
+	rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)

@@ -9,8 +9,7 @@ import rl "vendor:raylib"
 particle_size :: 3
 
 render_scene :: proc(scene: Scene) {
-	defer rl.DrawFPS(i32(scene.size.x / 2), 0)
-
+	// defer rl.DrawFPS(i32(scene.size.x / 2), 0)
 	for p in scene.particles {
 		using p
 		rl.DrawCircle(i32(pos.x), i32(pos.y), particle_size, scene.color_map[cluster])
