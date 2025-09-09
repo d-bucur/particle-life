@@ -9,6 +9,7 @@ import rl "vendor:raylib"
 particle_size :: 3
 
 render_scene :: proc(scene: Scene) {
+	// TODO render circle once and reuse
 	// defer rl.DrawFPS(i32(scene.size.x / 2), 0)
 	for p in scene.particles {
 		using p

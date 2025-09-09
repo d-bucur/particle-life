@@ -22,6 +22,15 @@
             "program": "${workspaceFolder}/build/desktop/game_desktop.bin",
             "args": [],
             "cwd": "${workspaceFolder}"
-        }
+        },
+		// trying to debug tests, not working
+        // {
+        //     "type": "lldb",
+        //     "request": "launch",
+        //     "name": "Debug Test LLDB",
+        //     "program": "odin",
+        //     "args": ["test", "tests", "-debug"],
+        //     "cwd": "${workspaceFolder}"
+        // }
 	]
 }
