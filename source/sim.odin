@@ -125,8 +125,10 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	for &p, i in &scene.particles {
 		// calculate accelerations
 		p.accel = {0, 0}
-		for other, j in scene.particles {
+		neighbors := spatial_query(scene.spatial, p.pos, scene.params.dist_max)
+		for j in neighbors {
 			if i == j do continue
+			other := scene.particles[j]
 			delta := distance_wrapped(other.pos, p.pos, scene)
 			l := la.length(delta)
 			delta_norm := delta / l if l > 0.001 else 0
