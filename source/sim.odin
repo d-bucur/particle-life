@@ -20,7 +20,7 @@ max_particles :: 1000
 max_clusters :: 4
 
 Scene :: struct {
-	// TODO turn into soa later
+	// IMPROV turn into soa later
 	particles: [dynamic]Particle,
 	weights:   [max_clusters][max_clusters]f32,
 	size:      Vec2,
@@ -28,6 +28,7 @@ Scene :: struct {
 	speed:     f32,
 	color_map: [max_clusters]rl.Color,
 	cached:    Cached,
+	spatial:   SpatialIndex,
 }
 
 Cached :: struct {
@@ -53,6 +54,7 @@ init_scene_static :: proc(scene: ^Scene) {
 		dist_max   = 200,
 		life_time  = 20,
 	}
+	scene.spatial = create_spatial(scene.size, scene.params.dist_max)
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
@@ -83,7 +85,7 @@ resize_particles :: proc(scene: ^Scene, num_particles: int) {
 randomize_particle :: #force_inline proc(p: ^Particle, scene: Scene, time: f32) {
 	p.cluster = rand.int31_max(max_clusters)
 	p.pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
-	p.vel = {rand.float32() * 1, rand.float32() * 1}
+	// p.vel = {rand.float32() * 1, rand.float32() * 1}
 	p.birth_time = time
 }
 
@@ -117,6 +119,8 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 
 	// cached values
 	eq := scene.params.eq_ratio
+
+	spatial_rebuild(&scene.spatial, scene.particles)
 
 	for &p, i in &scene.particles {
 		// calculate accelerations
@@ -165,13 +169,17 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 }
 
 wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
-	// handle out of bounds
-	// could change to destroy particle
-	margin :: particle_size
-	if (pos.x > size.x + margin) do pos.x = -margin
-	else if (pos.x < -margin) do pos.x = size.x + margin
-	if (pos.y > size.y + margin) do pos.y = -margin
-	else if (pos.y < -margin) do pos.y = size.y + margin
+	// HACK rethink how margin works
+	// BUG can still assert if diff > size (ie. when minimizing the game)
+	margin :: 0
+	if (pos.x >= size.x + margin) do pos.x -= size.x - margin
+	else if (pos.x < -margin) do pos.x += size.x + margin
+	assert(pos.x >= 0)
+	assert(pos.x < size.x)
+	if (pos.y >= size.y + margin) do pos.y -= size.y - margin
+	else if (pos.y < -margin) do pos.y += size.y + margin
+	assert(pos.y >= 0)
+	assert(pos.y < size.y)
 }
 
 cleanup_particles :: proc(scene: ^Scene, time: f32) {
