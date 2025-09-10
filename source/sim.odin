@@ -84,11 +84,12 @@ init_scene_test :: proc(scene: ^Scene) {
 
 resize_particles :: proc(scene: ^Scene, num_particles: int) {
 	diff := num_particles - len(scene.particles)
+	time := f32(rl.GetTime())
 	switch {
 	case diff > 0:
 		for i in 0 ..< diff {
 			p := Particle{}
-			randomize_particle(&p, scene^, (rand.float32() - 1) * scene.params.life_time)
+			randomize_particle(&p, scene^, time - rand.float32() * scene.params.life_time)
 			append(&scene.particles, p)
 		}
 	case diff < 0:

@@ -1,6 +1,7 @@
 # bugs
 - still some asserts?
 - weird effect in corners (can observer with maximum eq distance)
+- unstable with lots of particles. Maybe VV or changing params can help
 
 # optimizations
 - multithreading on desktop

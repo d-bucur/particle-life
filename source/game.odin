@@ -50,15 +50,19 @@ update :: proc() {
 	_render_time = (1 - _historic_fact) * _render_time + _historic_fact * duration
 	draw_ui(&_scene)
 
-	rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
-	rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
-	rl.DrawText(
-		fmt.ctprintf("%i", _useless_comparisons),
-		i32(_scene.size.x / 2),
-		40,
-		20,
-		rl.PURPLE,
-	)
+	when ODIN_ARCH == .wasm32 || ODIN_ARCH == .wasm64p32 {
+		rl.DrawFPS(i32(_scene.size.x / 2), 0)
+	} else {
+		rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
+		rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
+		rl.DrawText(
+			fmt.ctprintf("%i", _useless_comparisons),
+			i32(_scene.size.x / 2),
+			40,
+			20,
+			rl.PURPLE,
+		)
+	}
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)

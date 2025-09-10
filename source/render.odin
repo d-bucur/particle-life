@@ -21,7 +21,6 @@ init_render :: proc() {
 }
 
 render_scene :: proc(scene: Scene) {
-	// defer rl.DrawFPS(i32(scene.size.x / 2), 0)
 	for p in scene.particles {
 		rl.DrawTextureV(
 			_particle_texture.texture,
