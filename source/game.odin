@@ -23,6 +23,7 @@ init :: proc() {
 	_target_particle_count = 300
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
+	init_render()
 	// init_scene_test(&_scene)
 }
 

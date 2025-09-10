@@ -1,10 +1,10 @@
 # bugs
 - still some asserts?
+- weird effect in corners (can observer with maximum eq distance)
 
 # optimizations
-- soa and break operations (separate integration etc)
 - multithreading on desktop
-- render particle to texture beforehand
+- soa and break operations (separate integration etc)
 
 # features
 - repeating scene

@@ -1,21 +1,33 @@
 package game
 
-import "core:log"
 import "core:fmt"
+import "core:log"
 import "core:math"
 import "core:math/linalg"
 import "core:strings"
 import rl "vendor:raylib"
 
-particle_size :: 3
+particle_radius :: 3
 _visual_debug :: false
+_particle_texture: rl.RenderTexture2D
+
+init_render :: proc() {
+	sz: i32 = particle_radius * 3
+	_particle_texture = rl.LoadRenderTexture(sz, sz)
+	rl.BeginTextureMode(_particle_texture)
+	// rl.ClearBackground(rl.WHITE) // square particle
+	rl.DrawCircleGradient(particle_radius, particle_radius, particle_radius, rl.GRAY, rl.WHITE)
+	rl.EndTextureMode()
+}
 
 render_scene :: proc(scene: Scene) {
-	// IMPROV render circle once and reuse
 	// defer rl.DrawFPS(i32(scene.size.x / 2), 0)
 	for p in scene.particles {
-		using p
-		rl.DrawCircle(i32(pos.x), i32(pos.y), particle_size, scene.color_map[cluster])
+		rl.DrawTextureV(
+			_particle_texture.texture,
+			p.pos - particle_radius,
+			scene.color_map[p.cluster],
+		)
 	}
 	draw_debug(scene)
 }
@@ -29,7 +41,7 @@ draw_ui :: proc(scene: ^Scene) {
 
 	dist_max := scene.params.dist_max
 	rl.GuiSlider(_layout(5), "", "max dist", &dist_max, 1, 800)
-	if dist_max != scene.params.dist_max{
+	if dist_max != scene.params.dist_max {
 		scene.params.dist_max = dist_max
 		_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
 	}
