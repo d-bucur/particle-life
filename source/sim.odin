@@ -129,26 +129,28 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	for &p, i in &scene.particles {
 		// calculate accelerations
 		p.accel = {0, 0}
-		neighbors := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
-		for j in neighbors {
-			if i == j do continue
-			other := scene.particles[j]
-			delta := distance_wrapped(other.pos, p.pos, scene)
-			l := la.length(delta)
-			delta_norm := delta / l if l > 0.001 else 0
-			r := l / scene.params.dist_max
-			weight := scene.weights[p.cluster][other.cluster]
+		tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
+		for tile_key in tiles_in_range {
+			for j in scene.spatial.grid[tile_key] {
+				if i == j do continue
+				other := scene.particles[j]
+				delta := distance_wrapped(other.pos, p.pos, scene)
+				l := la.length(delta)
+				delta_norm := delta / l if l > 0.001 else 0
+				r := l / scene.params.dist_max
+				weight := scene.weights[p.cluster][other.cluster]
 
-			force: f32
-			if r < eq {
-				force = r / eq - 1
-			} else if r < 1 {
-				force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-			} else {
-				_useless_comparisons += 1
-				continue
+				force: f32
+				if r < eq {
+					force = r / eq - 1
+				} else if r < 1 {
+					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
+				} else {
+					_useless_comparisons += 1
+					continue
+				}
+				p.accel += force * delta_norm
 			}
-			p.accel += force * delta_norm
 		}
 		// rl.DrawLineV(p.pos, p.pos + p.accel * 10, scene.color_map[p.cluster])
 		p.accel *= scene.params.force_mult
@@ -177,6 +179,7 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
 	// HACK rethink how margin works
 	// BUG can still assert if diff > size (ie. when minimizing the game)
+	// BUG still asserts sometimes
 	margin :: 0
 	if (pos.x >= size.x + margin) do pos.x -= size.x - margin
 	else if (pos.x < -margin) do pos.x += size.x + margin

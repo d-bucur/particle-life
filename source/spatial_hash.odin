@@ -21,7 +21,7 @@ SpatialIndex :: struct {
 create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) -> SpatialIndex {
 	// world_size should always be a multiple of tile_size, otherwise weird things happen at the borders
 	preferred := dist_max * preferred_ratio
-	fits: = world_size / preferred
+	fits := world_size / preferred
 	tile_size := world_size / fits
 	return SpatialIndex {
 		tile_size = tile_size,
@@ -65,16 +65,17 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 	}
 }
 
-// IMPROV return tiles instead of single particles
-// maybe can use some ideas form here: https://www.redblobgames.com/grids/circle-drawing/ ?
+// Returns keys in spatial grid for tiles that might overlap. Tiles have to be iterated manually by caller
 spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -> [dynamic]int {
-	result := make([dynamic]int, context.temp_allocator)
+	// MAYBE test octree implementation: https://en.wikipedia.org/wiki/Quadtree#Pseudocode
+	// MAYBE can use some ideas form here: https://www.redblobgames.com/grids/circle-drawing/ ?
 
 	corner1_unwrapped := spatial_pos(spatial, pos - {radius, radius}, false)
 	corner2_unwrapped := spatial_pos(spatial, pos + {radius, radius}, false)
 	diff := corner2_unwrapped - corner1_unwrapped
 	corner_start := spatial_pos(spatial, pos - {radius, radius}) // IMPROV can cache with above
 
+	result := make([dynamic]int, 20, context.temp_allocator)
 	// iterate grid indexes in range and wraparound
 	for i := 0; i <= diff.x; i += 1 {
 		x := corner_start.x + i
@@ -84,7 +85,7 @@ spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -
 			if y >= spatial.grid_size.y do y -= spatial.grid_size.y
 
 			key := spatial_pos_to_key(spatial, {x, y})
-			append_elems(&result, ..spatial.grid[key][:])
+			append(&result, key)
 
 			when _visual_debug {
 				if idx == 0 {
