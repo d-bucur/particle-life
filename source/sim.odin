@@ -19,10 +19,11 @@ Particle :: struct {
 
 max_particles :: 1000
 max_clusters :: 4
+max_velocity :: 2
 _useless_comparisons: int // used for profiling
 
 Scene :: struct {
-	// IMPROV turn into soa later
+	// IMPROV turning into #soa doesn't improve perf at all??
 	particles: [dynamic]Particle,
 	weights:   [max_clusters][max_clusters]f32,
 	size:      Vec2,
@@ -124,41 +125,63 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	eq := scene.params.eq_ratio
 	_useless_comparisons = 0
 
+	// IMPROV soa and memcopy over
+	for &p in &scene.particles {
+		p.accel = {0, 0}
+	}
+
 	spatial_rebuild(&scene.spatial, scene.particles)
 
+	// pass to accumulate accelerations
 	for &p, i in &scene.particles {
-		// calculate accelerations
-		p.accel = {0, 0}
+		// query particles in range
 		tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
 		for tile_key in tiles_in_range {
 			for j in scene.spatial.grid[tile_key] {
-				if i == j do continue
-				other := scene.particles[j]
+				if i < j do continue
+				other := &scene.particles[j]
 				delta := distance_wrapped(other.pos, p.pos, scene)
 				l := la.length(delta)
 				delta_norm := delta / l if l > 0.001 else 0
 				r := l / scene.params.dist_max
-				weight := scene.weights[p.cluster][other.cluster]
 
+				// TODO don't repeat code
 				force: f32
+				// particle 1
+				weight := scene.weights[p.cluster][other.cluster]
 				if r < eq {
 					force = r / eq - 1
 				} else if r < 1 {
 					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
 				} else {
 					_useless_comparisons += 1
-					continue
+					force = 0
 				}
-				p.accel += force * delta_norm
+				p.accel += force * delta_norm // no mass
+
+				// particle 2
+				force = 0
+				weight = scene.weights[other.cluster][p.cluster]
+				if r < eq {
+					force = r / eq - 1
+				} else if r < 1 {
+					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
+				} else {
+					_useless_comparisons += 1
+					force = 0
+				}
+				other.accel -= force * delta_norm // no mass
 			}
 		}
-		// rl.DrawLineV(p.pos, p.pos + p.accel * 10, scene.color_map[p.cluster])
+	}
+
+	// integration pass
+	for &p in &scene.particles {
 		p.accel *= scene.params.force_mult
 
-		// integrate velocity
+		// integrate velocity and clamp
 		// friction does not depend on dt. inconsistent at different speeds
 		p.vel = p.vel * scene.params.friction + p.accel * dt
-		max_velocity :: 100
 		p.vel.x = math.clamp(p.vel.x, -max_velocity, max_velocity)
 		p.vel.y = math.clamp(p.vel.y, -max_velocity, max_velocity)
 
@@ -180,7 +203,7 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 }
 
 wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
-	// MAYBE readd margins
+	// MAYBE re-add margins
 	margin :: 0
 	if (pos.x >= size.x + margin) do pos.x -= size.x - margin
 	else if (pos.x < -margin) do pos.x += size.x + margin

@@ -9,14 +9,14 @@ import rl "vendor:raylib"
 PosGrid :: distinct [2]int
 
 SpatialIndex :: struct {
-	grid:       [dynamic][dynamic]int, // each tile in the grid has a list of indices to the particle array
+	// each tile in the grid has a list of indices to the particle array
+	grid:       [dynamic][dynamic]int,
 	// world_size = tile_size * grid_size
 	tile_size:  Vec2,
 	world_size: Vec2,
 	grid_size:  [2]int,
 }
 
-// TODO update on dist changed
 create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) -> SpatialIndex {
 	// world_size should always be a multiple of tile_size, otherwise weird things happen at the borders
 	preferred := dist_max * preferred_ratio
@@ -69,7 +69,7 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 // Returns keys in spatial grid for tiles that might overlap. Tiles have to be iterated manually by caller
 spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -> [dynamic]int {
 	// MAYBE test octree implementation: https://en.wikipedia.org/wiki/Quadtree#Pseudocode
-	// MAYBE can use some ideas form here: https://www.redblobgames.com/grids/circle-drawing/ ?
+	// MAYBE can use some ideas from here: https://www.redblobgames.com/grids/circle-drawing/ ?
 
 	corner1_unwrapped := spatial_pos(spatial, pos - {radius, radius}, false)
 	corner2_unwrapped := spatial_pos(spatial, pos + {radius, radius}, false)
@@ -81,11 +81,9 @@ spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -
 	// manual indices to avoid divisions
 	x := corner_start.x
 	for i := 0; i <= diff.x; i += 1 {
-		x += 1
 		if x >= spatial.grid_size.x do x -= spatial.grid_size.x
 		y := corner_start.y
 		for j := 0; j <= diff.y; j += 1 {
-			y += 1
 			if y >= spatial.grid_size.y do y -= spatial.grid_size.y
 
 			key := spatial_pos_to_key(spatial, {x, y})
@@ -105,7 +103,9 @@ spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -
 					)
 				}
 			}
+			y += 1
 		}
+		x += 1
 	}
 
 	return result

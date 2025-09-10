@@ -1,12 +1,13 @@
 # bugs
-- some asserts: sim.odin(190:2) runtime assertion: pos.y < size.y
+- still some asserts?
 
 # optimizations
-- symmetric pass
-- break operations (separate integration etc)
+- soa and break operations (separate integration etc)
 - multithreading on desktop
+- render particle to texture beforehand
 
 # features
 - repeating scene
+- use velocity verlet?
 - genetic evolution of weights, collisions to make particles fight etc. should be separate branch
 - better ui

@@ -39,10 +39,6 @@ spatial_key :: proc(t: ^testing.T) {
 	expect_value(t, spatial_pos(spatial, {7, 7}), 8)
 	expect_value(t, spatial_pos(spatial, {-1, -1}), 8)
 
-	// MAYBE clamp values out of range?
-	// testing.expect_value(t, game.spatial_pos_to_key(spatial, {-1, 0}), 0)
-	// testing.expect_value(t, game.spatial_pos_to_key(spatial, {10, 0}), 2)
-
 	// testing.expect_assert(t, "x > size.x")
 	// game.spatial_pos_to_key({9, 0}, spatial)
 	// testing.expect_assert(t, "y > size.y")
