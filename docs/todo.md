@@ -1,6 +1,9 @@
+# bugs
+- resizing window -> spatial index
+- default window doesn't have correct tile sizing (spatial index)
+
 # optimizations
-- spatial map
-- symmetric pass?
+- symmetric pass
 - break operations (separate integration etc)
 - multithreading on desktop
 

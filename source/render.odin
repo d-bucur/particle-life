@@ -1,5 +1,6 @@
 package game
 
+import "core:log"
 import "core:fmt"
 import "core:math"
 import "core:math/linalg"
@@ -7,6 +8,7 @@ import "core:strings"
 import rl "vendor:raylib"
 
 particle_size :: 3
+_visual_debug :: false
 
 render_scene :: proc(scene: Scene) {
 	// IMPROV render circle once and reuse
@@ -15,6 +17,7 @@ render_scene :: proc(scene: Scene) {
 		using p
 		rl.DrawCircle(i32(pos.x), i32(pos.y), particle_size, scene.color_map[cluster])
 	}
+	draw_debug(scene)
 }
 
 _ui_width :: 200
@@ -38,8 +41,20 @@ draw_ui :: proc(scene: ^Scene) {
 		resize_particles(scene, count)
 	}
 
+	// tile size
+	if rl.IsKeyPressed(.LEFT_BRACKET) {
+		_target_tile_ratio -= 0.1
+		scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
+		log.infof("%v", _target_tile_ratio)
+	}
+	if rl.IsKeyPressed(.RIGHT_BRACKET) {
+		_target_tile_ratio += 0.1
+		scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
+		log.infof("%v", _target_tile_ratio)
+	}
+
 	// move particle on click
-	if rl.IsMouseButtonPressed(.MIDDLE) {
+	if rl.IsMouseButtonPressed(.LEFT) {
 		_scene.particles[0].pos = rl.GetMousePosition()
 	}
 
@@ -85,4 +100,25 @@ draw_ui :: proc(scene: ^Scene) {
 
 _layout :: proc(i: i32) -> rl.Rectangle {
 	return rl.Rectangle{0, _scene.size.y - f32(i) * 20, _ui_width, 20}
+}
+
+draw_debug :: proc(scene: Scene) {
+	when _visual_debug {
+		for i in 0 ..= scene.spatial.grid_size.x {
+			x := f32(i) * scene.spatial.tile_size.x
+			rl.DrawLineV({x, 0}, {x, scene.size.y}, rl.GRAY)
+		}
+		for j in 0 ..= scene.spatial.grid_size.y {
+			y := f32(j) * scene.spatial.tile_size.y
+			rl.DrawLineV({0, y}, {scene.size.x, y}, rl.GRAY)
+		}
+
+		if len(scene.particles) == 0 do return
+		rl.DrawCircleLinesV(
+			scene.particles[0].pos,
+			scene.params.dist_max * scene.params.eq_ratio,
+			rl.GREEN,
+		)
+		rl.DrawCircleLinesV(scene.particles[0].pos, scene.params.dist_max, rl.PURPLE)
+	}
 }

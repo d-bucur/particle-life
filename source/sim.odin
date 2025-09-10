@@ -1,5 +1,6 @@
 package game
 
+import "core:log"
 import "core:math"
 import la "core:math/linalg"
 import "core:math/rand"
@@ -18,6 +19,7 @@ Particle :: struct {
 
 max_particles :: 1000
 max_clusters :: 4
+_useless_comparisons: int // used for profiling
 
 Scene :: struct {
 	// IMPROV turn into soa later
@@ -54,7 +56,7 @@ init_scene_static :: proc(scene: ^Scene) {
 		dist_max   = 200,
 		life_time  = 20,
 	}
-	scene.spatial = create_spatial(scene.size, scene.params.dist_max)
+	scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
@@ -66,6 +68,17 @@ init_scene_rand :: proc(scene: ^Scene) {
 		hue: f32 = math.remainder(f32(i) * golden_ratio + offset, 1)
 		color = rl.ColorFromHSV(hue * 360, 0.7, 1)
 	}
+}
+
+init_scene_test :: proc(scene: ^Scene) {
+	_target_particle_count = 2
+	scene.params.life_time = 10000
+	append(&scene.particles, Particle{pos = {50, 250}, cluster = 0})
+	append(&scene.particles, Particle{pos = {scene.size.x - 50, 250}, cluster = 1})
+	scene.weights[0][1] = 1
+	scene.weights[1][0] = 1
+	scene.color_map[0] = rl.RED
+	scene.color_map[1] = rl.YELLOW
 }
 
 resize_particles :: proc(scene: ^Scene, num_particles: int) {
@@ -85,7 +98,7 @@ resize_particles :: proc(scene: ^Scene, num_particles: int) {
 randomize_particle :: #force_inline proc(p: ^Particle, scene: Scene, time: f32) {
 	p.cluster = rand.int31_max(max_clusters)
 	p.pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
-	// p.vel = {rand.float32() * 1, rand.float32() * 1}
+	p.vel = {rand.float32() * 1, rand.float32() * 1}
 	p.birth_time = time
 }
 
@@ -103,29 +116,20 @@ rebuild_cache :: proc(scene: ^Scene) {
 	scene.cached.er = 1 / (1 - scene.params.eq_ratio)
 }
 
-init_scene_test :: proc(scene: ^Scene) {
-	// only works with arrays of size 2
-	// scene.particles = {
-	// 	Particle{pos = {50, 50}, cluster = 0},
-	// 	Particle{pos = {scene.size.x - 50, 50}, cluster = 1},
-	// }
-	// scene.weights = {{1, 1}, {1, 1}}
-	// scene.color_map = {rl.RED, rl.YELLOW}
-}
-
 update_scene :: proc(scene: ^Scene, dt: f32) {
 	if dt == 0 do return // nothing to update
 	dt := dt * 100 * scene.speed // avoid rounding errors by staying close to 1
 
 	// cached values
 	eq := scene.params.eq_ratio
+	_useless_comparisons = 0
 
 	spatial_rebuild(&scene.spatial, scene.particles)
 
 	for &p, i in &scene.particles {
 		// calculate accelerations
 		p.accel = {0, 0}
-		neighbors := spatial_query(scene.spatial, p.pos, scene.params.dist_max)
+		neighbors := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
 		for j in neighbors {
 			if i == j do continue
 			other := scene.particles[j]
@@ -140,14 +144,13 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 				force = r / eq - 1
 			} else if r < 1 {
 				force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-			} else do continue
+			} else {
+				_useless_comparisons += 1
+				continue
+			}
 			p.accel += force * delta_norm
 		}
 		// rl.DrawLineV(p.pos, p.pos + p.accel * 10, scene.color_map[p.cluster])
-		// if i == 0 {
-		// 	rl.DrawCircleLinesV(p.pos, scene.params.dist_max * eq, rl.GREEN)
-		// 	rl.DrawCircleLinesV(p.pos, scene.params.dist_max, rl.PURPLE)
-		// }
 		p.accel *= scene.params.force_mult
 
 		// integrate velocity
@@ -158,6 +161,7 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 		p.pos += p.vel * dt
 		wrap_position(&p.pos, scene.size)
 	}
+
 }
 
 distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 {

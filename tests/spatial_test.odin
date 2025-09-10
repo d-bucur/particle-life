@@ -21,18 +21,23 @@ spatial_key :: proc(t: ^testing.T) {
     3 4 5
     6 7 8
     */
+	// better to use create_spatial() ?
 	game._scene.size = {9, 9}
 	spatial := game.SpatialIndex {
-		tile_width      = 3,
-		tile_half_width = 1.5,
-		row_size        = 3,
+		tile_size  = {3, 3},
+		grid_size  = {3, 3},
+		world_size = {9, 9},
 	}
-	expect_value(t, game.spatial_pos_to_key(spatial, {0, 0}), 0)
-	expect_value(t, game.spatial_pos_to_key(spatial, {0.5, 0.5}), 0)
-	expect_value(t, game.spatial_pos_to_key(spatial, {3, 0}), 1)
-	expect_value(t, game.spatial_pos_to_key(spatial, {8, 0}), 2)
-	expect_value(t, game.spatial_pos_to_key(spatial, {0, 3}), 3)
-	expect_value(t, game.spatial_pos_to_key(spatial, {7, 7}), 8)
+	spatial_pos :: proc(spatial: game.SpatialIndex, pos: [2]f32) -> int {
+		return game.spatial_pos_to_key(spatial, game.spatial_pos(spatial, pos))
+	}
+	expect_value(t, spatial_pos(spatial, {0, 0}), 0)
+	expect_value(t, spatial_pos(spatial, {0.5, 0.5}), 0)
+	expect_value(t, spatial_pos(spatial, {3, 0}), 1)
+	expect_value(t, spatial_pos(spatial, {8, 0}), 2)
+	expect_value(t, spatial_pos(spatial, {0, 3}), 3)
+	expect_value(t, spatial_pos(spatial, {7, 7}), 8)
+	expect_value(t, spatial_pos(spatial, {-1, -1}), 8)
 
 	// MAYBE clamp values out of range?
 	// testing.expect_value(t, game.spatial_pos_to_key(spatial, {-1, 0}), 0)

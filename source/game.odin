@@ -1,16 +1,17 @@
 package game
 
-import "core:fmt"
 import "core:c"
+import "core:fmt"
 import "core:time"
 import rl "vendor:raylib"
 
 _run: bool
 _scene: Scene
 _target_particle_count: f32 // has to be float to work with raygui
+_target_tile_ratio: f32 = 0.3 // tiles in spatial grid try to be this ratio of the dist_max
 _update_time: f64
 _render_time: f64
-historic :: 0.1
+_historic_fact :: 0.1
 
 init :: proc() {
 	_run = true
@@ -19,9 +20,9 @@ init :: proc() {
 		size = {1024, 600},
 	}
 	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
+	_target_particle_count = 300
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
-	_target_particle_count = 300
 	// init_scene_test(&_scene)
 }
 
@@ -40,16 +41,23 @@ update :: proc() {
 	start := time.tick_now()
 	update_scene(&_scene, rl.GetFrameTime())
 	duration := time.duration_microseconds(time.tick_since(start))
-	_update_time = (1 - historic) * _update_time + historic * duration
+	_update_time = (1 - _historic_fact) * _update_time + _historic_fact * duration
 
 	start = time.tick_now()
 	render_scene(_scene)
 	duration = time.duration_microseconds(time.tick_since(start))
-	_render_time = (1 - historic) * _render_time + historic * duration
+	_render_time = (1 - _historic_fact) * _render_time + _historic_fact * duration
 	draw_ui(&_scene)
 
 	rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
 	rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
+	rl.DrawText(
+		fmt.ctprintf("%i", _useless_comparisons),
+		i32(_scene.size.x / 2),
+		40,
+		20,
+		rl.PURPLE,
+	)
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)
