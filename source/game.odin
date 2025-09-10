@@ -79,6 +79,7 @@ set_scene_size :: proc(w, h: i32) {
 
 shutdown :: proc() {
 	rl.CloseWindow()
+	delete(_scene.particles)
 }
 
 should_run :: proc() -> bool {

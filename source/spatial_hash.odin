@@ -54,10 +54,15 @@ spatial_pos_to_key :: proc(spatial: SpatialIndex, pos: PosGrid) -> int {
 }
 
 spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
+	// override allocator bc i'm not sure how pass the temp one to the internal array
+	// and this leaks otherwise
+	prev_allocator := context.allocator
+	defer context.allocator = prev_allocator
+	context.allocator = context.temp_allocator
+
 	spatial.grid = make_dynamic_array_len(
 		[dynamic][dynamic]int,
 		spatial.grid_size.x * spatial.grid_size.y,
-		allocator = context.temp_allocator,
 	)
 	for p, i in particles {
 		pos := spatial_pos(spatial^, p.pos)
