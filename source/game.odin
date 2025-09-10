@@ -72,6 +72,8 @@ parent_window_size_changed :: proc(w, h: i32) {
 
 set_scene_size :: proc(w, h: i32) {
 	_scene.size = {f32(w), f32(h)}
+	rebuild_cache(&_scene)
+	_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
 }
 
 shutdown :: proc() {

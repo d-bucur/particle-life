@@ -1,6 +1,4 @@
 # bugs
-- resizing window -> spatial index
-- default window doesn't have correct tile sizing (spatial index)
 - some asserts: sim.odin(190:2) runtime assertion: pos.y < size.y
 
 # optimizations

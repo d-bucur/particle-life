@@ -16,12 +16,12 @@ SpatialIndex :: struct {
 	grid_size:  [2]int,
 }
 
-// TODO handle resize (update rows)
 // TODO update on dist changed
 create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) -> SpatialIndex {
 	// world_size should always be a multiple of tile_size, otherwise weird things happen at the borders
 	preferred := dist_max * preferred_ratio
 	fits := world_size / preferred
+	fits = {math.floor(fits.x), math.floor(fits.y)} // no array programming bruh?
 	tile_size := world_size / fits
 	return SpatialIndex {
 		tile_size = tile_size,
@@ -60,7 +60,8 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 		allocator = context.temp_allocator,
 	)
 	for p, i in particles {
-		key := spatial_pos_to_key(spatial^, spatial_pos(spatial^, p.pos))
+		pos := spatial_pos(spatial^, p.pos)
+		key := spatial_pos_to_key(spatial^, pos)
 		append(&spatial.grid[key], i)
 	}
 }
@@ -77,11 +78,14 @@ spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -
 
 	result := make([dynamic]int, 20, context.temp_allocator)
 	// iterate grid indexes in range and wraparound
+	// manual indices to avoid divisions
+	x := corner_start.x
 	for i := 0; i <= diff.x; i += 1 {
-		x := corner_start.x + i
+		x += 1
 		if x >= spatial.grid_size.x do x -= spatial.grid_size.x
+		y := corner_start.y
 		for j := 0; j <= diff.y; j += 1 {
-			y := corner_start.y + j
+			y += 1
 			if y >= spatial.grid_size.y do y -= spatial.grid_size.y
 
 			key := spatial_pos_to_key(spatial, {x, y})

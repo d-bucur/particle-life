@@ -26,7 +26,14 @@ draw_ui :: proc(scene: ^Scene) {
 	rl.GuiSlider(_layout(2), "", "friction", &scene.params.friction, 0.01, 1)
 	rl.GuiSlider(_layout(3), "", "force", &scene.params.force_mult, 0.01, 0.2)
 	rl.GuiSlider(_layout(4), "", "equilibrium dist", &scene.params.eq_ratio, 0.001, 1)
-	rl.GuiSlider(_layout(5), "", "max dist", &scene.params.dist_max, 1, 800)
+
+	dist_max := scene.params.dist_max
+	rl.GuiSlider(_layout(5), "", "max dist", &dist_max, 1, 800)
+	if dist_max != scene.params.dist_max{
+		scene.params.dist_max = dist_max
+		_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
+	}
+
 	if rl.GuiButton(_layout(6), "Random weights") {
 		fill_rand_weights(scene)
 	}

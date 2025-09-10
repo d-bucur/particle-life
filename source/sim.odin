@@ -158,6 +158,9 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 		// integrate velocity
 		// friction does not depend on dt. inconsistent at different speeds
 		p.vel = p.vel * scene.params.friction + p.accel * dt
+		max_velocity :: 100
+		p.vel.x = math.clamp(p.vel.x, -max_velocity, max_velocity)
+		p.vel.y = math.clamp(p.vel.y, -max_velocity, max_velocity)
 
 		// integrate position
 		p.pos += p.vel * dt
@@ -177,18 +180,19 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 }
 
 wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
-	// HACK rethink how margin works
-	// BUG can still assert if diff > size (ie. when minimizing the game)
-	// BUG still asserts sometimes
+	// MAYBE readd margins
 	margin :: 0
 	if (pos.x >= size.x + margin) do pos.x -= size.x - margin
 	else if (pos.x < -margin) do pos.x += size.x + margin
-	assert(pos.x >= 0)
-	assert(pos.x < size.x)
 	if (pos.y >= size.y + margin) do pos.y -= size.y - margin
 	else if (pos.y < -margin) do pos.y += size.y + margin
-	assert(pos.y >= 0)
-	assert(pos.y < size.y)
+
+	// BUG can still assert if diff > size (ie. when minimizing the game, or very fast speeds)
+	// worth it to do division here?
+	// assert(pos.x >= 0)
+	// assert(pos.x < size.x)
+	// assert(pos.y >= 0)
+	// assert(pos.y < size.y)
 }
 
 cleanup_particles :: proc(scene: ^Scene, time: f32) {
