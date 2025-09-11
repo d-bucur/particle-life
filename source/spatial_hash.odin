@@ -34,7 +34,11 @@ create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) ->
 	// leaks initial array memory??
 }
 
-spatial_pos :: proc(spatial: SpatialIndex, pos: Vec2, wraparound: bool = true) -> PosGrid {
+spatial_pos :: proc "contextless" (
+	spatial: SpatialIndex,
+	pos: Vec2,
+	wraparound: bool = true,
+) -> PosGrid {
 	pos := pos
 	if wraparound {
 		wrap_position(&pos, spatial.world_size)
@@ -45,7 +49,7 @@ spatial_pos :: proc(spatial: SpatialIndex, pos: Vec2, wraparound: bool = true) -
 	return PosGrid{row, column}
 }
 
-spatial_pos_to_key :: proc(spatial: SpatialIndex, pos: PosGrid) -> int {
+spatial_pos_to_key :: #force_inline proc(spatial: SpatialIndex, pos: PosGrid) -> int {
 	assert(pos.x >= 0)
 	assert(pos.x < spatial.grid_size.x)
 	assert(pos.y >= 0)
@@ -72,16 +76,18 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 }
 
 // Returns keys in spatial grid for tiles that might overlap. Tiles have to be iterated manually by caller
-spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int) -> [dynamic]int {
+spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int, allocator:= context.temp_allocator) -> [dynamic]int {
 	// MAYBE test octree implementation: https://en.wikipedia.org/wiki/Quadtree#Pseudocode
 	// MAYBE can use some ideas from here: https://www.redblobgames.com/grids/circle-drawing/ ?
 
 	corner1_unwrapped := spatial_pos(spatial, pos - {radius, radius}, false)
 	corner2_unwrapped := spatial_pos(spatial, pos + {radius, radius}, false)
+	// IMPROV clamp diff to max world size for worst case scenario
 	diff := corner2_unwrapped - corner1_unwrapped
 	corner_start := spatial_pos(spatial, pos - {radius, radius}) // IMPROV can cache with above
 
-	result := make([dynamic]int, 20, context.temp_allocator)
+	// IMPROV calculate and cache max len and use here. Also append only if len(tile) > 0
+	result := make([dynamic]int, 20, allocator)
 	// iterate grid indexes in range and wraparound
 	// manual indices to avoid divisions
 	x := corner_start.x

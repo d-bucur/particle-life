@@ -122,59 +122,13 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	if dt == 0 do return // nothing to update
 	dt := dt * 100 * scene.speed // avoid rounding errors by staying close to 1
 
-	// cached values
-	eq := scene.params.eq_ratio
 	_useless_comparisons = 0
-
 	// IMPROV soa and memcopy over
 	for &p in &scene.particles {
 		p.accel = {0, 0}
 	}
-
 	spatial_rebuild(&scene.spatial, scene.particles)
-
-	// pass to accumulate accelerations
-	for &p, i in &scene.particles {
-		// query particles in range
-		tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
-		for tile_key in tiles_in_range {
-			for j in scene.spatial.grid[tile_key] {
-				if i < j do continue
-				other := &scene.particles[j]
-				delta := distance_wrapped(other.pos, p.pos, scene)
-				l := la.length(delta)
-				delta_norm := delta / l if l > 0.001 else 0
-				r := l / scene.params.dist_max
-
-				// TODO don't repeat code
-				force: f32
-				// particle 1
-				weight := scene.weights[p.cluster][other.cluster]
-				if r < eq {
-					force = r / eq - 1
-				} else if r < 1 {
-					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-				} else {
-					_useless_comparisons += 1
-					force = 0
-				}
-				p.accel += force * delta_norm // no mass
-
-				// particle 2
-				force = 0
-				weight = scene.weights[other.cluster][p.cluster]
-				if r < eq {
-					force = r / eq - 1
-				} else if r < 1 {
-					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-				} else {
-					_useless_comparisons += 1
-					force = 0
-				}
-				other.accel -= force * delta_norm // no mass
-			}
-		}
-	}
+	accumulate_accel(scene)
 
 	// integration pass
 	for &p in &scene.particles {
@@ -203,7 +157,7 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 	return r
 }
 
-wrap_position :: #force_inline proc(pos: ^Vec2, size: Vec2) {
+wrap_position :: #force_inline proc "contextless" (pos: ^Vec2, size: Vec2) {
 	// MAYBE re-add margins
 	margin :: 0
 	if (pos.x >= size.x + margin) do pos.x -= size.x - margin

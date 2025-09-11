@@ -24,6 +24,7 @@ init :: proc() {
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
 	init_render()
+	init_solvers()
 	// init_scene_test(&_scene)
 }
 
@@ -84,6 +85,7 @@ set_scene_size :: proc(w, h: i32) {
 shutdown :: proc() {
 	rl.CloseWindow()
 	delete(_scene.particles)
+	destroy_solvers()
 }
 
 should_run :: proc() -> bool {
