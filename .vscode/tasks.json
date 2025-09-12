@@ -12,7 +12,7 @@
         {
             "label": "build-debug",
             "type": "shell",
-            "command": "odin build source/main_desktop -debug -out:build/desktop/game_desktop.bin",
+            "command": "odin build source/main_desktop -debug -out:build/debug/game_desktop.bin",
             "group": "build"
         },
         {

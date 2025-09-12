@@ -1,5 +1,6 @@
 package game
 
+import "core:fmt"
 import "core:log"
 import "core:math"
 import la "core:math/linalg"
@@ -9,7 +10,7 @@ import "core:sys/info"
 import "core:thread"
 
 // Accumulate acceleration for each particle
-accumulate_accel :: #force_inline proc(scene: ^Scene) {
+accumulate_accel :: proc(scene: ^Scene) {
 	when thread.IS_SUPPORTED {
 		_accumulate_accel_multi_thread(scene)
 	} else {
@@ -18,7 +19,7 @@ accumulate_accel :: #force_inline proc(scene: ^Scene) {
 }
 
 // single threaded using symmetry (updating both particles with single force calculation)
-_accumulate_accel_single_thread :: #force_inline proc(scene: ^Scene) {
+_accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	eq := scene.params.eq_ratio
 	for &p, i in &scene.particles {
 		// query particles in range
@@ -85,11 +86,11 @@ TaskData :: struct {
 
 init_solvers :: proc() {
 	when thread.IS_SUPPORTED {
-		task_count := info.cpu.physical_cores
-		thread.pool_init(&_pool, context.allocator, task_count)
-		resize(&_task_runners, task_count)
-		resize(&_task_data, task_count)
-		log.infof("Thread pool intitialized with %v threads", task_count)
+		thread_count := info.cpu.physical_cores
+		thread.pool_init(&_pool, context.allocator, thread_count)
+		resize(&_task_runners, thread_count)
+		resize(&_task_data, thread_count)
+		log.infof("Thread pool intitialized with %v threads", thread_count)
 
 		for &alloc in _task_runners {
 			mem.dynamic_arena_init(&alloc.arena)
@@ -106,7 +107,8 @@ destroy_solvers :: proc() {
 }
 
 // multi threaded using a task pool
-_accumulate_accel_multi_thread :: #force_inline proc(scene: ^Scene) {
+_accumulate_accel_multi_thread :: proc(scene: ^Scene) {
+	thread.pool_start(&_pool)
 	task_count := len(_task_runners)
 	count_per_task := len(scene.particles) / task_count
 	for t, i in _task_runners {
@@ -118,12 +120,11 @@ _accumulate_accel_multi_thread :: #force_inline proc(scene: ^Scene) {
 		_task_data[i].scene = scene
 		thread.pool_add_task(&_pool, t.allocator, _accel_particles, rawptr(&_task_data[i]), i)
 	}
-	thread.pool_start(&_pool)
 	thread.pool_finish(&_pool)
-	clear(&_pool.tasks_done)
+	clear(&_pool.tasks_done) // grows too much, need to clear
 }
 
-_accel_particles :: #force_inline proc(t: thread.Task) {
+_accel_particles :: proc(t: thread.Task) {
 	data := (^TaskData)(t.data)
 	scene := data.scene
 	eq := scene.params.eq_ratio

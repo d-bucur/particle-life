@@ -8,7 +8,7 @@
 			"request": "launch",
 			"preLaunchTask": "build-debug",
 			"name": "Debug CPP",
-			"program": "${workspaceFolder}/build/desktop/game_desktop.bin",
+			"program": "${workspaceFolder}/build/debug/game_desktop.bin",
 			"args": [],
 			"cwd": "${workspaceFolder}"
 		},
@@ -19,7 +19,7 @@
             "request": "launch",
             "preLaunchTask": "build-debug",
             "name": "Debug LLDB",
-            "program": "${workspaceFolder}/build/desktop/game_desktop.bin",
+            "program": "${workspaceFolder}/build/debug/game_desktop.bin",
             "args": [],
             "cwd": "${workspaceFolder}"
         },

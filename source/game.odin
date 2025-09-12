@@ -5,6 +5,11 @@ import "core:fmt"
 import "core:time"
 import rl "vendor:raylib"
 
+import "base:runtime"
+import "core:prof/spall"
+import "core:sync"
+
+_instrumentation :: false
 _run: bool
 _scene: Scene
 _target_particle_count: f32 // has to be float to work with raygui
@@ -25,6 +30,7 @@ init :: proc() {
 	init_scene_rand(&_scene)
 	init_render()
 	init_solvers()
+	spall_init()
 	// init_scene_test(&_scene)
 }
 
@@ -86,6 +92,7 @@ shutdown :: proc() {
 	rl.CloseWindow()
 	delete(_scene.particles)
 	destroy_solvers()
+	spall_destroy()
 }
 
 should_run :: proc() -> bool {
@@ -97,4 +104,49 @@ should_run :: proc() -> bool {
 	}
 
 	return _run
+}
+
+when _instrumentation {
+	// Tracing stuff with spall
+	// Generates a .spall file that can be loaded in https://gravitymoth.com/spall/spall.html
+	// IMPROV add conditional compile
+
+	spall_ctx: spall.Context
+	@(thread_local)
+	spall_buffer: spall.Buffer
+	spall_buffer_backing: []u8
+
+	spall_init :: proc() {
+		spall_ctx = spall.context_create("trace_test.spall")
+		spall_buffer_backing = make([]u8, spall.BUFFER_DEFAULT_SIZE)
+		spall_buffer = spall.buffer_create(spall_buffer_backing, u32(sync.current_thread_id()))
+		spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+	}
+
+	spall_destroy :: proc() {
+		defer spall.context_destroy(&spall_ctx)
+		defer delete(spall_buffer_backing)
+		defer spall.buffer_destroy(&spall_ctx, &spall_buffer)
+	}
+
+	// Automatic profiling of every procedure:
+
+	@(instrumentation_enter)
+	spall_enter :: proc "contextless" (
+		proc_address, call_site_return_address: rawptr,
+		loc: runtime.Source_Code_Location,
+	) {
+		spall._buffer_begin(&spall_ctx, &spall_buffer, "", "", loc)
+	}
+
+	@(instrumentation_exit)
+	spall_exit :: proc "contextless" (
+		proc_address, call_site_return_address: rawptr,
+		loc: runtime.Source_Code_Location,
+	) {
+		spall._buffer_end(&spall_ctx, &spall_buffer)
+	}
+} else {
+	spall_init :: proc() {}
+	spall_destroy :: proc() {}
 }

@@ -1,5 +1,6 @@
 package game
 
+import "core:math/linalg"
 import "core:fmt"
 import "core:log"
 import "core:math"
@@ -43,8 +44,8 @@ spatial_pos :: proc "contextless" (
 	if wraparound {
 		wrap_position(&pos, spatial.world_size)
 	}
-	row := int(math.floor(pos.x / spatial.tile_size.x))
-	column := int(math.floor(pos.y / spatial.tile_size.y))
+	row := int((pos.x / spatial.tile_size.x))
+	column := int((pos.y / spatial.tile_size.y))
 
 	return PosGrid{row, column}
 }
@@ -63,11 +64,17 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 	prev_allocator := context.allocator
 	defer context.allocator = prev_allocator
 	context.allocator = context.temp_allocator
+	avg_particles := len(particles) / (spatial.grid_size.x * spatial.grid_size.x)
 
 	spatial.grid = make_dynamic_array_len(
 		[dynamic][dynamic]int,
 		spatial.grid_size.x * spatial.grid_size.y,
 	)
+	// IMPROV clear and reuse same arrays from previous frame
+	// >50% of time spent on reserving arrays
+	for &tile in spatial.grid {
+		reserve(&tile, avg_particles)
+	}
 	for p, i in particles {
 		pos := spatial_pos(spatial^, p.pos)
 		key := spatial_pos_to_key(spatial^, pos)
