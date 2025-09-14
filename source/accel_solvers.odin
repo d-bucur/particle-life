@@ -66,17 +66,19 @@ _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	}
 }
 
+@(private = "file")
 _task_runners: [dynamic]TaskRunner
+@(private = "file")
 _task_data: [dynamic]TaskData
-_thread_scene: ^Scene // not ideal, but at least don't have to set it for each thread
+@(private = "file")
+_thread_scene: ^Scene // not ideal as a global, but at least don't have to set it for each thread
 
 @(private = "file")
 TaskRunner :: struct {
 	allocator: mem.Allocator,
 	arena:     mem.Dynamic_Arena,
 	thread:    ^thread.Thread,
-	lock:       sync.Futex,
-	// TODO alternatives: Wait_Group or start thread each time and join
+	lock:      sync.Futex,
 }
 
 @(private = "file")
@@ -129,6 +131,7 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	for &t in _task_runners {
 		sync.futex_wait(&t.lock, 1)
 	}
+	// BUG: hangs on pressing ESC, probably due to wait here
 }
 
 _accel_particles :: proc(t: ^thread.Thread) {

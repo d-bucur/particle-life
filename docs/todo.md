@@ -5,6 +5,7 @@
 
 # optimizations
 - multithreading on desktop
+- can do a single query per grid tile and reuse the result
 - soa and break operations (separate integration etc)
 
 # features
