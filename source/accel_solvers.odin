@@ -72,6 +72,8 @@ _task_runners: [dynamic]TaskRunner
 _task_data: [dynamic]TaskData
 @(private = "file")
 _thread_scene: ^Scene // not ideal as a global, but at least don't have to set it for each thread
+@(private = "file")
+_partial_accels: [dynamic]Vec2
 
 @(private = "file")
 TaskRunner :: struct {
@@ -120,6 +122,7 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	_thread_scene = scene
 	task_count := len(_task_runners)
 	count_per_task := len(scene.particles) / task_count
+	resize(&_partial_accels, len(scene.particles) * len(_task_runners))
 	for &runner, i in _task_runners {
 		_task_data[i].start = i * count_per_task
 		_task_data[i].end = (i + 1) * count_per_task
@@ -131,6 +134,16 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	for &t in _task_runners {
 		sync.futex_wait(&t.lock, 1)
 	}
+	// log.infof("All threads finished map phase")
+	// accumulate partial results
+	for &t in _task_runners {
+		intrinsics.atomic_add(&t.lock, 1)
+		sync.futex_signal(&t.lock)
+	}
+	for &t in _task_runners {
+		sync.futex_wait(&t.lock, 1)
+	}
+	// log.infof("All threads finished reduce phase")
 	// BUG: hangs on pressing ESC, probably due to wait here
 }
 
@@ -143,12 +156,15 @@ _accel_particles :: proc(t: ^thread.Thread) {
 		sync.futex_wait(sem, 0)
 		scene := _thread_scene
 		eq := scene.params.eq_ratio
-		for &p, i in _thread_scene.particles[data.start:data.end] {
+		// TODO error in previus commit as well?
+		// for &p, i in _thread_scene.particles[data.start:data.end] {
+		for i in data.start ..< data.end {
+			p := &_thread_scene.particles[i]
 			// query particles in range
 			tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
 			for tile_key in tiles_in_range {
 				for j in scene.spatial.grid[tile_key] {
-					if i == j do continue
+					if i < j do continue
 					other := &scene.particles[j]
 					delta := distance_wrapped(other.pos, p.pos, scene)
 					l := la.length(delta)
@@ -167,12 +183,39 @@ _accel_particles :: proc(t: ^thread.Thread) {
 						_useless_comparisons += 1
 						force = 0
 					}
-					p.accel += force * delta_norm // no mass
+					_partial_accels[len(_task_runners) * i + t.user_index] += force * delta_norm
+
+					// particle 2
+					force = 0
+					weight = scene.weights[other.cluster][p.cluster]
+					if r < eq {
+						force = r / eq - 1
+					} else if r < 1 {
+						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
+					} else {
+						_useless_comparisons += 1
+						force = 0
+					}
+					_partial_accels[len(_task_runners) * j + t.user_index] -= force * delta_norm
 				}
 			}
 		}
+		// fmt.printfln("Thread %v finished map phase [%v:%v]", t.user_index, data.start, data.end)
 		intrinsics.atomic_sub(sem, 1)
 		sync.futex_signal(sem)
 		free_all(_task_runners[t.user_index].allocator)
+
+		// Second part of the algorithm, for each particle accumulate accelerations from all threads
+		sync.futex_wait(sem, 0)
+		for i in data.start ..< data.end {
+			for j in len(_task_runners) * i ..< len(_task_runners) * (i + 1) {
+				p := &_thread_scene.particles[i]
+				p.accel += _partial_accels[j]
+				_partial_accels[j] = {0, 0}
+			}
+		}
+		// fmt.printfln("Thread %v finished reduce phase", t.user_index)
+		intrinsics.atomic_sub(sem, 1)
+		sync.futex_signal(sem)
 	}
 }
