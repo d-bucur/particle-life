@@ -66,17 +66,19 @@ _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	}
 }
 
+@(private = "file")
 _task_runners: [dynamic]TaskRunner
+@(private = "file")
 _task_data: [dynamic]TaskData
-_thread_scene: ^Scene // not ideal, but at least don't have to set it for each thread
+@(private = "file")
+_thread_scene: ^Scene // not ideal as a global, but at least don't have to set it for each thread
 
 @(private = "file")
 TaskRunner :: struct {
 	allocator: mem.Allocator,
 	arena:     mem.Dynamic_Arena,
 	thread:    ^thread.Thread,
-	lock:       sync.Futex,
-	// TODO alternatives: Wait_Group or start thread each time and join
+	lock:      sync.Futex,
 }
 
 @(private = "file")
@@ -129,6 +131,7 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	for &t in _task_runners {
 		sync.futex_wait(&t.lock, 1)
 	}
+	// BUG: hangs on pressing ESC, probably due to wait here
 }
 
 _accel_particles :: proc(t: ^thread.Thread) {
@@ -140,7 +143,8 @@ _accel_particles :: proc(t: ^thread.Thread) {
 		sync.futex_wait(sem, 0)
 		scene := _thread_scene
 		eq := scene.params.eq_ratio
-		for &p, i in _thread_scene.particles[data.start:data.end] {
+		for i in data.start ..< data.end {
+			p := &_thread_scene.particles[i]
 			// query particles in range
 			tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
 			for tile_key in tiles_in_range {
