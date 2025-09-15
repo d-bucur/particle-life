@@ -1,9 +1,9 @@
 package game
 
-import "core:math/linalg"
 import "core:fmt"
 import "core:log"
 import "core:math"
+import "core:math/linalg"
 import "core:odin/ast"
 import rl "vendor:raylib"
 
@@ -11,11 +11,12 @@ PosGrid :: distinct [2]int
 
 SpatialIndex :: struct {
 	// each tile in the grid has a list of indices to the particle array
-	grid:       [dynamic][dynamic]int,
+	grid:           [dynamic][dynamic]int,
 	// world_size = tile_size * grid_size
-	tile_size:  Vec2,
-	world_size: Vec2,
-	grid_size:  [2]int,
+	tile_size:      Vec2,
+	tile_size_half: Vec2,
+	world_size:     Vec2,
+	grid_size:      [2]int,
 }
 
 create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) -> SpatialIndex {
@@ -26,6 +27,7 @@ create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) ->
 	tile_size := world_size / fits
 	return SpatialIndex {
 		tile_size = tile_size,
+		tile_size_half = tile_size / 2,
 		grid_size = {
 			int(math.ceil(world_size.x / tile_size.x)),
 			int(math.ceil(world_size.y / tile_size.y)),
@@ -83,7 +85,12 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 }
 
 // Returns keys in spatial grid for tiles that might overlap. Tiles have to be iterated manually by caller
-spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int, allocator:= context.temp_allocator) -> [dynamic]int {
+spatial_query :: proc(
+	spatial: SpatialIndex,
+	pos: Vec2,
+	radius: f32,
+	allocator := context.temp_allocator,
+) -> [dynamic]int {
 	// MAYBE test octree implementation: https://en.wikipedia.org/wiki/Quadtree#Pseudocode
 	// MAYBE can use some ideas from here: https://www.redblobgames.com/grids/circle-drawing/ ?
 
@@ -108,18 +115,16 @@ spatial_query :: proc(spatial: SpatialIndex, pos: Vec2, radius: f32, idx: int, a
 			append(&result, key)
 
 			when _visual_debug {
-				if idx == 0 {
-					rl.DrawRectangleLinesEx(
-						{
-							f32(x) * spatial.tile_size.x,
-							f32(y) * spatial.tile_size.y,
-							spatial.tile_size.x,
-							spatial.tile_size.y,
-						},
-						3,
-						rl.SKYBLUE,
-					)
-				}
+				rl.DrawRectangleLinesEx(
+					{
+						f32(x) * spatial.tile_size.x,
+						f32(y) * spatial.tile_size.y,
+						spatial.tile_size.x,
+						spatial.tile_size.y,
+					},
+					3,
+					rl.SKYBLUE,
+				)
 			}
 			y += 1
 		}

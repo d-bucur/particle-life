@@ -23,44 +23,52 @@ accumulate_accel :: proc(scene: ^Scene) {
 // single threaded using symmetry (updating both particles with single force calculation)
 _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	eq := scene.params.eq_ratio
-	for &p, i in &scene.particles {
-		// query particles in range
-		tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
-		for tile_key in tiles_in_range {
-			for j in scene.spatial.grid[tile_key] {
-				if i < j do continue
-				other := &scene.particles[j]
-				delta := distance_wrapped(other.pos, p.pos, scene)
-				l := la.length(delta)
-				delta_norm := delta / l if l > 0.001 else 0
-				r := l / scene.params.dist_max
+	for particles_in_tile, tile_idx in &scene.spatial.grid {
+		if len(particles_in_tile) == 0 do continue
+		y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
+		c := Vec2{f32(x), f32(y)}
+		// BUG minor: doesn't cover furthers tile when point is at the edges of the tile (reproduce with 1 particle)
+		tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
+		tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
+		for i in particles_in_tile {
+			p := &scene.particles[i]
+			// query particles in range
+			for tile_key in tiles_in_range {
+				for j in scene.spatial.grid[tile_key] {
+					if i < j do continue
+					other := &scene.particles[j]
+					delta := distance_wrapped(other.pos, p.pos, scene)
+					l := la.length(delta)
+					delta_norm := delta / l if l > 0.001 else 0
+					r := l / scene.params.dist_max
 
-				// TODO don't repeat code
-				force: f32
-				// particle 1
-				weight := scene.weights[p.cluster][other.cluster]
-				if r < eq {
-					force = r / eq - 1
-				} else if r < 1 {
-					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-				} else {
-					_useless_comparisons += 1
-					force = 0
-				}
-				p.accel += force * delta_norm // no mass
+					// TODO don't repeat code
+					force: f32
+					// particle 1
+					weight := scene.weights[p.cluster][other.cluster]
+					if r < eq {
+						force = r / eq - 1
+					} else if r < 1 {
+						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
+					} else {
+						_useless_comparisons += 1
+						force = 0
+					}
+					p.accel += force * delta_norm // no mass
 
-				// particle 2
-				force = 0
-				weight = scene.weights[other.cluster][p.cluster]
-				if r < eq {
-					force = r / eq - 1
-				} else if r < 1 {
-					force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-				} else {
-					_useless_comparisons += 1
+					// particle 2
 					force = 0
+					weight = scene.weights[other.cluster][p.cluster]
+					if r < eq {
+						force = r / eq - 1
+					} else if r < 1 {
+						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
+					} else {
+						_useless_comparisons += 1
+						force = 0
+					}
+					other.accel -= force * delta_norm // no mass
 				}
-				other.accel -= force * delta_norm // no mass
 			}
 		}
 	}
@@ -146,7 +154,7 @@ _accel_particles :: proc(t: ^thread.Thread) {
 		for i in data.start ..< data.end {
 			p := &_thread_scene.particles[i]
 			// query particles in range
-			tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max, i)
+			tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max)
 			for tile_key in tiles_in_range {
 				for j in scene.spatial.grid[tile_key] {
 					if i == j do continue

@@ -54,7 +54,7 @@ draw_ui :: proc(scene: ^Scene) {
 	if rl.IsKeyPressed(.EQUAL) do _target_particle_count += 50
 	count := int(_target_particle_count)
 	label := fmt.ctprintf("count: %v", count)
-	rl.GuiSlider(_layout(7), "", label, &_target_particle_count, 2, 4000)
+	rl.GuiSlider(_layout(7), "", label, &_target_particle_count, 1, 4000)
 	if count != len(scene.particles) {
 		resize_particles(scene, count)
 	}

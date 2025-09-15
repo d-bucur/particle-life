@@ -71,15 +71,18 @@ init_scene_rand :: proc(scene: ^Scene) {
 	}
 }
 
-init_scene_test :: proc(scene: ^Scene) {
-	_target_particle_count = 2
+// Only works with counts 1 and 2
+init_scene_test :: proc(scene: ^Scene, count: int = 2) {
+	_target_particle_count = f32(count)
 	scene.params.life_time = 10000
 	append(&scene.particles, Particle{pos = {50, 250}, cluster = 0})
-	append(&scene.particles, Particle{pos = {scene.size.x - 50, 250}, cluster = 1})
-	scene.weights[0][1] = 1
-	scene.weights[1][0] = 1
 	scene.color_map[0] = rl.RED
-	scene.color_map[1] = rl.YELLOW
+	if count == 2 {
+		append(&scene.particles, Particle{pos = {scene.size.x - 50, 250}, cluster = 1})
+		scene.weights[0][1] = 1
+		scene.weights[1][0] = 1
+		scene.color_map[1] = rl.YELLOW
+	}
 }
 
 resize_particles :: proc(scene: ^Scene, num_particles: int) {
