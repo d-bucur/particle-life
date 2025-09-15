@@ -11,9 +11,11 @@ import "core:sync"
 import "core:sys/info"
 import "core:thread"
 
+_is_threaded :: thread.IS_SUPPORTED
+
 // Accumulate acceleration for each particle
 accumulate_accel :: proc(scene: ^Scene) {
-	when thread.IS_SUPPORTED {
+	when _is_threaded {
 		_accumulate_accel_multi_thread(scene)
 	} else {
 		_accumulate_accel_single_thread(scene)
@@ -32,32 +34,44 @@ _calc_force :: #force_inline proc(r: f32, weight: f32, eq: f32, er: f32) -> f32 
 
 // single threaded using symmetry (updates both particles with single force calculation)
 _accumulate_accel_single_thread :: proc(scene: ^Scene) {
-	// TODO don't repeat code
 	for particles_in_tile, tile_idx in &scene.spatial.grid {
-		if len(particles_in_tile) == 0 do continue
-		y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
-		c := Vec2{f32(x), f32(y)}
-		// BUG minor: doesn't cover furthest tile when point is at the edges of the tile (reproduce with 1 particle)
-		tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
-		tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
-		for i in particles_in_tile {
-			p := &scene.particles[i]
-			for tile_key in tiles_in_range {
-				for j in scene.spatial.grid[tile_key] {
+		_accel_per_tile(particles_in_tile, tile_idx, scene)
+	}
+}
+
+_accel_per_tile :: #force_inline proc(
+	particles_in_tile: [dynamic]int,
+	tile_idx: int,
+	scene: ^Scene,
+) {
+	if len(particles_in_tile) == 0 do return
+	y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
+	c := Vec2{f32(x), f32(y)}
+	// BUG minor: doesn't cover furthest tile when point is at the edges of the tile (reproduce with 1 particle)
+	tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
+	tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
+	for i in particles_in_tile {
+		p := &scene.particles[i]
+		for tile_key in tiles_in_range {
+			for j in scene.spatial.grid[tile_key] {
+				// if single threaded then do symmetrical pass
+				when _is_threaded {
+					if i == j do continue
+				} else {
 					if i < j do continue
-					other := &scene.particles[j]
-					delta := distance_wrapped(other.pos, p.pos, scene)
-					l := la.length(delta)
-					delta_norm := delta / l if l > 0.001 else 0
-					r := l / scene.params.dist_max
+				}
+				other := &scene.particles[j]
+				delta := distance_wrapped(other.pos, p.pos, scene)
+				l := la.length(delta)
+				delta_norm := delta / l if l > 0.001 else 0
+				r := l / scene.params.dist_max
 
-					// particle 1
-					weight := scene.weights[p.cluster][other.cluster]
-					p.accel +=
-						delta_norm *
-						_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
+				weight := scene.weights[p.cluster][other.cluster]
+				p.accel +=
+					delta_norm * _calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
 
-					// particle 2
+				// if single threaded then apply symmetric force to other particle now
+				when !_is_threaded {
 					weight = scene.weights[other.cluster][p.cluster]
 					other.accel -=
 						delta_norm *
@@ -165,30 +179,7 @@ _accel_subset_thread :: proc(t: ^thread.Thread) {
 		scene := _thread_scene
 		for tile_idx in data.start ..< data.end {
 			particles_in_tile := scene.spatial.grid[tile_idx]
-			if len(particles_in_tile) == 0 do continue
-			y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
-			c := Vec2{f32(x), f32(y)}
-			// BUG minor: doesn't cover furtherst tile when point is at the edges of the tile (reproduce with 1 particle)
-			tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
-			tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
-			for i in particles_in_tile {
-				p := &scene.particles[i]
-				for tile_key in tiles_in_range {
-					for j in scene.spatial.grid[tile_key] {
-						if i == j do continue
-						other := &scene.particles[j]
-						delta := distance_wrapped(other.pos, p.pos, scene)
-						l := la.length(delta)
-						delta_norm := delta / l if l > 0.001 else 0
-						r := l / scene.params.dist_max
-
-						weight := scene.weights[p.cluster][other.cluster]
-						p.accel +=
-							delta_norm *
-							_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
-					}
-				}
-			}
+			_accel_per_tile(particles_in_tile, tile_idx, scene)
 		}
 		intrinsics.atomic_sub(sem, 1)
 		sync.futex_signal(sem)

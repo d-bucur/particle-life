@@ -100,8 +100,7 @@ spatial_query :: proc(
 	diff := corner2_unwrapped - corner1_unwrapped
 	corner_start := spatial_pos(spatial, pos - {radius, radius}) // IMPROV can cache with above
 
-	// IMPROV calculate and cache max len and use here. Also append only if len(tile) > 0
-	result := make([dynamic]int, 20, allocator)
+	result := make([dynamic]int, 50, allocator)
 	// iterate grid indexes in range and wraparound
 	// manual indices to avoid divisions
 	x := corner_start.x
@@ -112,7 +111,7 @@ spatial_query :: proc(
 			if y >= spatial.grid_size.y do y -= spatial.grid_size.y
 
 			key := spatial_pos_to_key(spatial, {x, y})
-			append(&result, key)
+			if (len(spatial.grid[key]) > 0) do append(&result, key)
 
 			when _visual_debug {
 				rl.DrawRectangleLinesEx(

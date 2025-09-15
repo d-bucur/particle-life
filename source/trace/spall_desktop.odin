@@ -5,7 +5,7 @@ import "core:sync"
 import "base:runtime"
 import "core:prof/spall"
 
-_instrumentation :: true
+_instrumentation :: false
 
 when _instrumentation {
 	// Tracing stuff with spall
