@@ -20,7 +20,7 @@ accumulate_accel :: proc(scene: ^Scene) {
 	}
 }
 
-_calc_force :: proc(r: f32, weight: f32, eq: f32, er: f32) -> f32 {
+_calc_force :: #force_inline proc(r: f32, weight: f32, eq: f32, er: f32) -> f32 {
 	if r < eq {
 		return r / eq - 1
 	} else if r < 1 {
@@ -30,20 +30,18 @@ _calc_force :: proc(r: f32, weight: f32, eq: f32, er: f32) -> f32 {
 	}
 }
 
-// single threaded using symmetry (updating both particles with single force calculation)
+// single threaded using symmetry (updates both particles with single force calculation)
 _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	// TODO don't repeat code
-	eq := scene.params.eq_ratio
 	for particles_in_tile, tile_idx in &scene.spatial.grid {
 		if len(particles_in_tile) == 0 do continue
 		y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
 		c := Vec2{f32(x), f32(y)}
-		// BUG minor: doesn't cover furthers tile when point is at the edges of the tile (reproduce with 1 particle)
+		// BUG minor: doesn't cover furthest tile when point is at the edges of the tile (reproduce with 1 particle)
 		tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
 		tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
 		for i in particles_in_tile {
 			p := &scene.particles[i]
-			// query particles in range
 			for tile_key in tiles_in_range {
 				for j in scene.spatial.grid[tile_key] {
 					if i < j do continue
@@ -102,7 +100,7 @@ init_solvers :: proc() {
 		for &runner, i in _task_runners {
 			mem.dynamic_arena_init(&runner.arena)
 			runner.allocator = mem.dynamic_arena_allocator(&runner.arena)
-			runner.thread = thread.create(_accel_particles)
+			runner.thread = thread.create(_accel_subset_thread)
 			runner.thread.data = &_task_data[i]
 			runner.thread.user_index = i
 			log.infof("Starting thread %v", runner.thread.user_index)
@@ -122,14 +120,33 @@ destroy_solvers :: proc() {
 
 _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	_thread_scene = scene
-	task_count := len(_task_runners)
-	count_per_task := len(scene.particles) / task_count
-	for &runner, i in _task_runners {
-		_task_data[i].start = i * count_per_task
-		_task_data[i].end = (i + 1) * count_per_task
-		// TODO missing remainder particles in last slice
-		intrinsics.atomic_add(&runner.lock, 1)
-		sync.futex_signal(&runner.lock)
+	thread_count := len(_task_runners)
+	count_per_task := len(scene.particles) / thread_count + 1
+	tiles_max := len(scene.spatial.grid) - 1
+	batch_count := 0
+	batch_start := 0
+	batch_num := 0
+	for tile, i in scene.spatial.grid {
+		assert(batch_num < thread_count)
+		batch_count += len(tile)
+		// IMPROV balancing. if current tile adds too many leave it for the next batch
+		if batch_count >= count_per_task || i == tiles_max {
+			// dispatch thread with current batch
+			_task_data[batch_num].start = batch_start
+			_task_data[batch_num].end = i + 1
+			// fmt.printfln(
+			// 	"Dispatched thread %v: [%v:%v] - count %v",
+			// 	batch_num,
+			// 	batch_start,
+			// 	i + 1,
+			// 	batch_count,
+			// )
+			intrinsics.atomic_add(&_task_runners[batch_num].lock, 1)
+			sync.futex_signal(&_task_runners[batch_num].lock)
+			batch_count = 0
+			batch_start = i + 1
+			batch_num += 1
+		}
 	}
 	// wait for threads to finish
 	for &t in _task_runners {
@@ -138,7 +155,7 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	// BUG: hangs on pressing ESC, probably due to wait here
 }
 
-_accel_particles :: proc(t: ^thread.Thread) {
+_accel_subset_thread :: proc(t: ^thread.Thread) {
 	data := (^TaskData)(t.data)
 	context.temp_allocator = _task_runners[t.user_index].allocator
 	sem := &_task_runners[t.user_index].lock
@@ -146,24 +163,30 @@ _accel_particles :: proc(t: ^thread.Thread) {
 	for {
 		sync.futex_wait(sem, 0)
 		scene := _thread_scene
-		eq := scene.params.eq_ratio
-		for i in data.start ..< data.end {
-			p := &_thread_scene.particles[i]
-			// query particles in range
-			tiles_in_range := spatial_query(scene.spatial, p.pos, scene.params.dist_max)
-			for tile_key in tiles_in_range {
-				for j in scene.spatial.grid[tile_key] {
-					if i == j do continue
-					other := &scene.particles[j]
-					delta := distance_wrapped(other.pos, p.pos, scene)
-					l := la.length(delta)
-					delta_norm := delta / l if l > 0.001 else 0
-					r := l / scene.params.dist_max
+		for tile_idx in data.start ..< data.end {
+			particles_in_tile := scene.spatial.grid[tile_idx]
+			if len(particles_in_tile) == 0 do continue
+			y, x := math.divmod(tile_idx, scene.spatial.grid_size.x)
+			c := Vec2{f32(x), f32(y)}
+			// BUG minor: doesn't cover furtherst tile when point is at the edges of the tile (reproduce with 1 particle)
+			tile_center := c * scene.spatial.tile_size + scene.spatial.tile_size_half
+			tiles_in_range := spatial_query(scene.spatial, tile_center, scene.params.dist_max)
+			for i in particles_in_tile {
+				p := &scene.particles[i]
+				for tile_key in tiles_in_range {
+					for j in scene.spatial.grid[tile_key] {
+						if i == j do continue
+						other := &scene.particles[j]
+						delta := distance_wrapped(other.pos, p.pos, scene)
+						l := la.length(delta)
+						delta_norm := delta / l if l > 0.001 else 0
+						r := l / scene.params.dist_max
 
-					weight := scene.weights[p.cluster][other.cluster]
-					p.accel +=
-						delta_norm *
-						_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
+						weight := scene.weights[p.cluster][other.cluster]
+						p.accel +=
+							delta_norm *
+							_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
+					}
 				}
 			}
 		}
