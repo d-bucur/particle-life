@@ -62,13 +62,6 @@ update :: proc() {
 	} else {
 		rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
 		rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
-		rl.DrawText(
-			fmt.ctprintf("%i", _useless_comparisons),
-			i32(_scene.size.x / 2),
-			40,
-			20,
-			rl.PURPLE,
-		)
 	}
 
 	// Anything allocated using temp allocator is invalid after this.

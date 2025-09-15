@@ -20,8 +20,19 @@ accumulate_accel :: proc(scene: ^Scene) {
 	}
 }
 
+_calc_force :: proc(r: f32, weight: f32, eq: f32, er: f32) -> f32 {
+	if r < eq {
+		return r / eq - 1
+	} else if r < 1 {
+		return weight * (1 - math.abs(2 * r - 1 - eq) * er)
+	} else {
+		return 0
+	}
+}
+
 // single threaded using symmetry (updating both particles with single force calculation)
 _accumulate_accel_single_thread :: proc(scene: ^Scene) {
+	// TODO don't repeat code
 	eq := scene.params.eq_ratio
 	for particles_in_tile, tile_idx in &scene.spatial.grid {
 		if len(particles_in_tile) == 0 do continue
@@ -42,32 +53,17 @@ _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 					delta_norm := delta / l if l > 0.001 else 0
 					r := l / scene.params.dist_max
 
-					// TODO don't repeat code
-					force: f32
 					// particle 1
 					weight := scene.weights[p.cluster][other.cluster]
-					if r < eq {
-						force = r / eq - 1
-					} else if r < 1 {
-						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-					} else {
-						_useless_comparisons += 1
-						force = 0
-					}
-					p.accel += force * delta_norm // no mass
+					p.accel +=
+						delta_norm *
+						_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
 
 					// particle 2
-					force = 0
 					weight = scene.weights[other.cluster][p.cluster]
-					if r < eq {
-						force = r / eq - 1
-					} else if r < 1 {
-						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-					} else {
-						_useless_comparisons += 1
-						force = 0
-					}
-					other.accel -= force * delta_norm // no mass
+					other.accel -=
+						delta_norm *
+						_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
 				}
 			}
 		}
@@ -164,19 +160,10 @@ _accel_particles :: proc(t: ^thread.Thread) {
 					delta_norm := delta / l if l > 0.001 else 0
 					r := l / scene.params.dist_max
 
-					// TODO don't repeat code
-					force: f32
-					// particle 1
 					weight := scene.weights[p.cluster][other.cluster]
-					if r < eq {
-						force = r / eq - 1
-					} else if r < 1 {
-						force = weight * (1 - math.abs(2 * r - 1 - eq) * scene.cached.er)
-					} else {
-						_useless_comparisons += 1
-						force = 0
-					}
-					p.accel += force * delta_norm // no mass
+					p.accel +=
+						delta_norm *
+						_calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
 				}
 			}
 		}
