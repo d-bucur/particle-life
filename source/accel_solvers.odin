@@ -126,10 +126,11 @@ init_solvers :: proc() {
 
 destroy_solvers :: proc() {
 	for &t in _task_runners {
+		thread.terminate(t.thread, 1)
 		thread.destroy(t.thread)
 	}
-	delete(_task_runners)
 	delete(_task_data)
+	delete(_task_runners)
 }
 
 _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
@@ -166,7 +167,6 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 	for &t in _task_runners {
 		sync.futex_wait(&t.lock, 1)
 	}
-	// BUG: hangs on pressing ESC, probably due to wait here
 }
 
 _accel_subset_thread :: proc(t: ^thread.Thread) {

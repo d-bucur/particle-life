@@ -124,7 +124,6 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	if dt == 0 do return // nothing to update
 	dt := dt * 100 * scene.speed // avoid rounding errors by staying close to 1
 
-	// IMPROV soa and memcopy over
 	for &p in &scene.particles {
 		p.accel = {0, 0}
 	}

@@ -1,12 +1,8 @@
 # bugs
-- still some asserts?
-- weird effect in corners (can observer with maximum eq distance)
 - unstable with lots of particles. Maybe VV or changing params can help
+- weird effect in corners (can observe with maximum eq distance)
 
 # optimizations
-- multithreading on desktop
-- can do a single query per grid tile and reuse the result
-- soa and break operations (separate integration etc)
 
 # features
 - repeating scene

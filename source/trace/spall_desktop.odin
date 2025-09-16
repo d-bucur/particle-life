@@ -10,7 +10,6 @@ _instrumentation :: false
 when _instrumentation {
 	// Tracing stuff with spall
 	// Generates a .spall file that can be loaded in https://gravitymoth.com/spall/spall.html
-	// IMPROV add conditional compile
 
 	spall_ctx: spall.Context
 	@(thread_local)

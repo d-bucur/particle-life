@@ -53,10 +53,10 @@ spatial_pos :: proc "contextless" (
 }
 
 spatial_pos_to_key :: #force_inline proc(spatial: SpatialIndex, pos: PosGrid) -> int {
-	assert(pos.x >= 0)
-	assert(pos.x < spatial.grid_size.x)
-	assert(pos.y >= 0)
-	assert(pos.y < spatial.grid_size.y)
+	// assert(pos.x >= 0)
+	// assert(pos.x < spatial.grid_size.x)
+	// assert(pos.y >= 0)
+	// assert(pos.y < spatial.grid_size.y)
 	return pos.y * spatial.grid_size.x + pos.x
 }
 
@@ -98,7 +98,7 @@ spatial_query :: proc(
 	corner2_unwrapped := spatial_pos(spatial, pos + {radius, radius}, false)
 	// IMPROV clamp diff to max world size for worst case scenario
 	diff := corner2_unwrapped - corner1_unwrapped
-	corner_start := spatial_pos(spatial, pos - {radius, radius}) // IMPROV can cache with above
+	corner_start := spatial_pos(spatial, pos - {radius, radius})
 
 	result := make([dynamic]int, 50, allocator)
 	// iterate grid indexes in range and wraparound
