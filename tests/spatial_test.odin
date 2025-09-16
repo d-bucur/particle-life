@@ -39,6 +39,13 @@ spatial_key :: proc(t: ^testing.T) {
 	expect_value(t, spatial_pos(spatial, {7, 7}), 8)
 	expect_value(t, spatial_pos(spatial, {-1, -1}), 8)
 
+	expect_value(t, game.spatial_pos(spatial, {0, 0}, false), game.PosGrid{0, 0})
+	expect_value(t, game.spatial_pos(spatial, {1, 1}, false), game.PosGrid{0, 0})
+	expect_value(t, game.spatial_pos(spatial, {-1, -1}, false), game.PosGrid{-1, -1})
+	expect_value(t, game.spatial_pos(spatial, {-2, -2}, false), game.PosGrid{-1, -1})
+	expect_value(t, game.spatial_pos(spatial, {-4, -4}, false), game.PosGrid{-2, -2})
+
+
 	// testing.expect_assert(t, "x > size.x")
 	// game.spatial_pos_to_key({9, 0}, spatial)
 	// testing.expect_assert(t, "y > size.y")

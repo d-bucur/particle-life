@@ -46,10 +46,14 @@ spatial_pos :: proc "contextless" (
 	if wraparound {
 		wrap_position(&pos, spatial.world_size)
 	}
-	row := int((pos.x / spatial.tile_size.x))
-	column := int((pos.y / spatial.tile_size.y))
-
+	row := _fast_int(pos.x / spatial.tile_size.x)
+	column := _fast_int(pos.y / spatial.tile_size.y)
 	return PosGrid{row, column}
+}
+
+// avoid extra modf of floor(), works in most cases
+_fast_int :: proc "contextless" (v: f32) -> int {
+	return int(v) if v >= 0 else int(v - 1)
 }
 
 spatial_pos_to_key :: #force_inline proc(spatial: SpatialIndex, pos: PosGrid) -> int {
