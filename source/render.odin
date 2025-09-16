@@ -35,7 +35,7 @@ _ui_width :: 200
 draw_ui :: proc(scene: ^Scene) {
 	rl.GuiSliderBar(_layout(1), "", "speed", &scene.speed, 0, 2)
 	rl.GuiSlider(_layout(2), "", "friction", &scene.params.friction, 0.01, 1)
-	rl.GuiSlider(_layout(3), "", "force", &scene.params.force_mult, 0.01, 0.2)
+	rl.GuiSlider(_layout(3), "", "force", &scene.params.force_mult, 1000, 4000)
 	rl.GuiSlider(_layout(4), "", "equilibrium dist", &scene.params.eq_ratio, 0.001, 1)
 
 	dist_max := scene.params.dist_max

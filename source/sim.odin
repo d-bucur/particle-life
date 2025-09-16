@@ -13,6 +13,7 @@ Particle :: struct {
 	pos:        Vec2,
 	vel:        Vec2,
 	accel:      Vec2,
+	old_accel:  Vec2,
 	cluster:    i32,
 	birth_time: f32,
 }
@@ -20,6 +21,7 @@ Particle :: struct {
 max_particles :: 1000
 max_clusters :: 4
 max_velocity :: 2
+max_accel :: 5000
 
 Scene :: struct {
 	// IMPROV turning into #soa doesn't improve perf at all??
@@ -122,9 +124,15 @@ rebuild_cache :: proc(scene: ^Scene) {
 
 update_scene :: proc(scene: ^Scene, dt: f32) {
 	if dt == 0 do return // nothing to update
-	dt := dt * 100 * scene.speed // avoid rounding errors by staying close to 1
+	dt := dt * scene.speed // avoid rounding errors by staying close to 1
+	dt_half := dt / 2
 
+	// Using velocity verlet for integration. Slighlty more operations but more stable
 	for &p in &scene.particles {
+		p.pos += dt * (p.vel + p.accel * dt_half)
+		wrap_position(&p.pos, scene.size)
+
+		p.old_accel = p.accel
 		p.accel = {0, 0}
 	}
 	spatial_rebuild(&scene.spatial, scene.particles)
@@ -133,16 +141,15 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	// integration pass
 	for &p in &scene.particles {
 		p.accel *= scene.params.force_mult
+		p.accel.x = math.clamp(p.accel.x, -max_accel, max_accel)
+		p.accel.y = math.clamp(p.accel.y, -max_accel, max_accel)
 
-		// integrate velocity and clamp
 		// friction does not depend on dt. inconsistent at different speeds
-		p.vel = p.vel * scene.params.friction + p.accel * dt
-		p.vel.x = math.clamp(p.vel.x, -max_velocity, max_velocity)
-		p.vel.y = math.clamp(p.vel.y, -max_velocity, max_velocity)
-
-		// integrate position
-		p.pos += p.vel * dt
-		wrap_position(&p.pos, scene.size)
+		p.vel = p.vel * scene.params.friction
+		p.vel += dt_half * (p.accel + p.old_accel)
+		// need to clamp velocity??
+		// p.vel.x = math.clamp(p.vel.x, -max_velocity, max_velocity)
+		// p.vel.y = math.clamp(p.vel.y, -max_velocity, max_velocity)
 	}
 
 }

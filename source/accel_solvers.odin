@@ -63,7 +63,7 @@ _accel_per_tile :: #force_inline proc(
 				other := &scene.particles[j]
 				delta := distance_wrapped(other.pos, p.pos, scene)
 				l := la.length(delta)
-				delta_norm := delta / l if l > 0.001 else 0
+				delta_norm := delta / l if l > 0.1 else 0
 				r := l / scene.params.dist_max
 
 				weight := scene.weights[p.cluster][other.cluster]
