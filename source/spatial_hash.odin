@@ -19,9 +19,11 @@ SpatialIndex :: struct {
 	grid_size:      [2]int,
 }
 
-create_spatial :: proc(world_size: Vec2, dist_max: f32, preferred_ratio: f32) -> SpatialIndex {
+_target_tile_ratio: f32 = 0.3 // tiles in spatial grid try to be this ratio of the dist_max
+
+create_spatial :: proc(world_size: Vec2, dist_max: f32) -> SpatialIndex {
 	// world_size should always be a multiple of tile_size, otherwise weird things happen at the borders
-	preferred := dist_max * preferred_ratio
+	preferred := dist_max * _target_tile_ratio
 	fits := world_size / preferred
 	fits = {math.floor(fits.x), math.floor(fits.y)} // no array programming bruh?
 	tile_size := world_size / fits

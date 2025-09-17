@@ -44,7 +44,7 @@ draw_ui :: proc(scene: ^Scene) {
 	rl.GuiSlider(_layout(5), "", "max dist", &dist_max, 1, 800)
 	if dist_max != scene.params.dist_max {
 		scene.params.dist_max = dist_max
-		_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
+		_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max)
 	}
 
 	if rl.GuiButton(_layout(6), "Random weights") {
@@ -64,12 +64,12 @@ draw_ui :: proc(scene: ^Scene) {
 	// tile size
 	if rl.IsKeyPressed(.LEFT_BRACKET) {
 		_target_tile_ratio -= 0.1
-		scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
+		scene.spatial = create_spatial(scene.size, scene.params.dist_max)
 		log.infof("%v", _target_tile_ratio)
 	}
 	if rl.IsKeyPressed(.RIGHT_BRACKET) {
 		_target_tile_ratio += 0.1
-		scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
+		scene.spatial = create_spatial(scene.size, scene.params.dist_max)
 		log.infof("%v", _target_tile_ratio)
 	}
 

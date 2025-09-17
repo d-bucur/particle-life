@@ -12,12 +12,12 @@ import "trace"
 
 _run: bool
 _scene: Scene
-_target_particle_count: f32 // has to be float to work with raygui
-_target_tile_ratio: f32 = 0.3 // tiles in spatial grid try to be this ratio of the dist_max
+_camera_offset: Vec2 // fake camera offset that wraps around, actual Raylib camera is fixed
+
+// performance timings
 _update_time: f64
 _render_time: f64
-_historic_fact :: 0.1
-_camera_offset: Vec2 // fake camera offset that wraps around, actual Raylib camera is fixed
+_historic_fact :: 0.1 // used to calculate FPS
 
 init :: proc() {
 	_run = true
@@ -26,7 +26,6 @@ init :: proc() {
 		size = {1024, 600},
 	}
 	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
-	_target_particle_count = 300
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
 	// init_scene_test(&_scene, 2)
@@ -94,7 +93,7 @@ parent_window_size_changed :: proc(w, h: i32) {
 set_scene_size :: proc(w, h: i32) {
 	_scene.size = {f32(w), f32(h)}
 	rebuild_cache(&_scene)
-	_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
+	_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max)
 }
 
 shutdown :: proc() {

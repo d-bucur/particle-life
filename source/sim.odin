@@ -18,9 +18,9 @@ Particle :: struct {
 	birth_time: f32,
 }
 
-max_particles :: 1000
+_target_particle_count: f32 = 300 // has to be float to work with raygui
 max_clusters :: 4
-max_velocity :: 2
+max_velocity :: 2 // not used currently
 max_accel :: 5000
 
 Scene :: struct {
@@ -45,7 +45,7 @@ SimParams :: struct {
 	force_mult: f32, // multiply force by factor
 	dist_max:   f32, // maximum attraction range
 	eq_ratio:   f32, // 0..=1 equilibrium ratio as percentage from dist_max
-	// Not sure I like how this works now
+	// MAYBE Not sure I like how life time works now
 	life_time:  f32, // after this time the particle will die and a new one will be spawned
 }
 
@@ -58,11 +58,11 @@ init_scene_static :: proc(scene: ^Scene) {
 		dist_max   = 200,
 		life_time  = 20,
 	}
-	scene.spatial = create_spatial(scene.size, scene.params.dist_max, _target_tile_ratio)
+	scene.spatial = create_spatial(scene.size, scene.params.dist_max)
 }
 
 init_scene_rand :: proc(scene: ^Scene) {
-	reserve(&scene.particles, max_particles)
+	reserve(&scene.particles, 2000)
 	fill_rand_weights(scene)
 	golden_ratio := (math.sqrt_f32(5) + 1) / 2
 	offset := rand.float32() * golden_ratio
