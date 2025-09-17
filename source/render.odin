@@ -10,7 +10,6 @@ import rl "vendor:raylib"
 particle_radius :: 3
 _visual_debug :: false
 _particle_texture: rl.RenderTexture2D
-_scene_texture: rl.RenderTexture2D
 _background_color := rl.ColorFromHSV(0, 0.1, 0.1)
 _camera := rl.Camera2D {
 	zoom = 1,
@@ -18,7 +17,6 @@ _camera := rl.Camera2D {
 
 init_render :: proc() {
 	sz: i32 = particle_radius * 3
-	_scene_texture = rl.LoadRenderTexture(i32(_scene.size.x), i32(_scene.size.y))
 	_particle_texture = rl.LoadRenderTexture(sz, sz)
 	rl.BeginTextureMode(_particle_texture)
 	// rl.ClearBackground(rl.WHITE) // square particle
@@ -28,11 +26,9 @@ init_render :: proc() {
 
 render_scene :: proc(scene: Scene) {
 	for p in scene.particles {
-		rl.DrawTextureV(
-			_particle_texture.texture,
-			p.pos - particle_radius,
-			scene.color_map[p.cluster],
-		)
+		pos := p.pos - particle_radius + _camera_offset
+		wrap_position(&pos, scene.size)
+		rl.DrawTextureV(_particle_texture.texture, pos, scene.color_map[p.cluster])
 	}
 	draw_debug(scene)
 }
@@ -122,30 +118,6 @@ draw_ui :: proc(scene: ^Scene) {
 }
 
 finish_render :: proc() {
-	handle_input()
-
-	// Draw repeating scene to the screen
-	rl.BeginMode2D(_camera)
-	source := rl.Rectangle {
-		0,
-		0,
-		f32(_scene_texture.texture.width),
-		-f32(_scene_texture.texture.height),
-	}
-	for i in 0 ..< 3 {
-		for j in 0 ..< 3 {
-			rl.DrawTexturePro(
-				_scene_texture.texture,
-				source,
-				rl.Rectangle{0, 0, _scene.size.x, _scene.size.y},
-				-{f32(i) * _scene.size.x, f32(j) * _scene.size.y},
-				0,
-				rl.WHITE,
-			)
-		}
-	}
-	rl.EndMode2D()
-
 	draw_ui(&_scene)
 
 	// Drraw render stats
