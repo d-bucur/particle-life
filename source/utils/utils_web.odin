@@ -4,7 +4,7 @@
 
 #+build wasm32, wasm64p32
 
-package game
+package utils
 
 import "base:runtime"
 import "core:log"

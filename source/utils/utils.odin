@@ -1,6 +1,6 @@
 // Wraps os.read_entire_file and os.write_entire_file, but they also work with emscripten.
 
-package game
+package utils
 
 @(require_results)
 read_entire_file :: proc(name: string, allocator := context.allocator, loc := #caller_location) -> (data: []byte, success: bool) {
