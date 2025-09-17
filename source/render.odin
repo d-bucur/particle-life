@@ -10,9 +10,15 @@ import rl "vendor:raylib"
 particle_radius :: 3
 _visual_debug :: false
 _particle_texture: rl.RenderTexture2D
+_scene_texture: rl.RenderTexture2D
+_background_color := rl.ColorFromHSV(0, 0.1, 0.1)
+_camera := rl.Camera2D {
+	zoom = 1,
+}
 
 init_render :: proc() {
 	sz: i32 = particle_radius * 3
+	_scene_texture = rl.LoadRenderTexture(i32(_scene.size.x), i32(_scene.size.y))
 	_particle_texture = rl.LoadRenderTexture(sz, sz)
 	rl.BeginTextureMode(_particle_texture)
 	// rl.ClearBackground(rl.WHITE) // square particle
@@ -113,7 +119,42 @@ draw_ui :: proc(scene: ^Scene) {
 			// scene.weights[i][j] = f32(weight) / 10
 		}
 	}
+}
 
+finish_render :: proc() {
+	handle_input()
+
+	// Draw repeating scene to the screen
+	rl.BeginMode2D(_camera)
+	source := rl.Rectangle {
+		0,
+		0,
+		f32(_scene_texture.texture.width),
+		-f32(_scene_texture.texture.height),
+	}
+	for i in 0 ..< 3 {
+		for j in 0 ..< 3 {
+			rl.DrawTexturePro(
+				_scene_texture.texture,
+				source,
+				rl.Rectangle{0, 0, _scene.size.x, _scene.size.y},
+				-{f32(i) * _scene.size.x, f32(j) * _scene.size.y},
+				0,
+				rl.WHITE,
+			)
+		}
+	}
+	rl.EndMode2D()
+
+	draw_ui(&_scene)
+
+	// Drraw render stats
+	when ODIN_ARCH == .wasm32 || ODIN_ARCH == .wasm64p32 {
+		rl.DrawFPS(i32(_scene.size.x / 2), 0)
+	} else {
+		rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
+		rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
+	}
 }
 
 _layout :: proc(i: i32) -> rl.Rectangle {
@@ -138,5 +179,6 @@ draw_debug :: proc(scene: Scene) {
 			rl.GREEN,
 		)
 		rl.DrawCircleLinesV(scene.particles[0].pos, scene.params.dist_max, rl.PURPLE)
+		rl.DrawRectangleLines(0, 0, i32(scene.size.x), i32(scene.size.y), rl.PURPLE)
 	}
 }

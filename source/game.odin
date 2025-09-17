@@ -27,7 +27,7 @@ init :: proc() {
 	_target_particle_count = 300
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
-	// init_scene_test(&_scene, 1)
+	// init_scene_test(&_scene, 2)
 	init_render()
 	init_solvers()
 	trace.spall_init()
@@ -36,13 +36,15 @@ init :: proc() {
 update :: proc() {
 	if rl.IsWindowResized() do set_scene_size(rl.GetScreenWidth(), rl.GetScreenHeight())
 	rebuild_cache(&_scene)
-	// log.info("log.info works!")
-	// fmt.println("fmt.println too.")
 
+	// Update and redraw particles in the scene
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
-	// try fade out effect
-	rl.ClearBackground(rl.ColorFromHSV(0, 0.1, 0.1))
+	rl.ClearBackground(_background_color)
+
+	// MAYBE try fade out effect
+	rl.BeginTextureMode(_scene_texture)
+	rl.ClearBackground(_background_color)
 
 	cleanup_particles(&_scene, f32(rl.GetTime()))
 	start := time.tick_now()
@@ -54,17 +56,20 @@ update :: proc() {
 	render_scene(_scene)
 	duration = time.duration_microseconds(time.tick_since(start))
 	_render_time = (1 - _historic_fact) * _render_time + _historic_fact * duration
-	draw_ui(&_scene)
+	rl.EndTextureMode()
 
-	when ODIN_ARCH == .wasm32 || ODIN_ARCH == .wasm64p32 {
-		rl.DrawFPS(i32(_scene.size.x / 2), 0)
-	} else {
-		rl.DrawText(fmt.ctprintf("%6.f", _update_time), i32(_scene.size.x / 2), 0, 20, rl.GREEN)
-		rl.DrawText(fmt.ctprintf("%6.f", _render_time), i32(_scene.size.x / 2), 20, 20, rl.YELLOW)
-	}
+	finish_render()
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)
+}
+
+handle_input :: proc() {
+	speed :: 10
+	if rl.IsKeyDown(.W) do _camera.offset += {0, speed}
+	if rl.IsKeyDown(.S) do _camera.offset += {0, -speed}
+	if rl.IsKeyDown(.A) do _camera.offset += {speed, 0}
+	if rl.IsKeyDown(.D) do _camera.offset += {-speed, 0}
 }
 
 // In a web build, this is called when browser changes size. Remove the
@@ -78,6 +83,9 @@ set_scene_size :: proc(w, h: i32) {
 	_scene.size = {f32(w), f32(h)}
 	rebuild_cache(&_scene)
 	_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max, _target_tile_ratio)
+	// Change size of scene texture
+	rl.UnloadRenderTexture(_scene_texture)
+	_scene_texture = rl.LoadRenderTexture(w, h)
 }
 
 shutdown :: proc() {
@@ -97,4 +105,3 @@ should_run :: proc() -> bool {
 
 	return _run
 }
-

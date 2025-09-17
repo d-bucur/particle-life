@@ -104,7 +104,7 @@ spatial_query :: proc(
 	diff := corner2_unwrapped - corner1_unwrapped
 	corner_start := spatial_pos(spatial, pos - {radius, radius})
 
-	result := make([dynamic]int, 50, allocator)
+	result := make_dynamic_array_len_cap([dynamic]int, 0, 50, allocator)
 	// iterate grid indexes in range and wraparound
 	// manual indices to avoid divisions
 	x := corner_start.x
@@ -117,18 +117,19 @@ spatial_query :: proc(
 			key := spatial_pos_to_key(spatial, {x, y})
 			if (len(spatial.grid[key]) > 0) do append(&result, key)
 
-			when _visual_debug {
-				rl.DrawRectangleLinesEx(
-					{
-						f32(x) * spatial.tile_size.x,
-						f32(y) * spatial.tile_size.y,
-						spatial.tile_size.x,
-						spatial.tile_size.y,
-					},
-					3,
-					rl.SKYBLUE,
-				)
-			}
+			// highlight tiles that are included in the query result
+			// when _visual_debug {
+			// 	rl.DrawRectangleLinesEx(
+			// 		{
+			// 			f32(x) * spatial.tile_size.x,
+			// 			f32(y) * spatial.tile_size.y,
+			// 			spatial.tile_size.x,
+			// 			spatial.tile_size.y,
+			// 		},
+			// 		3,
+			// 		rl.SKYBLUE,
+			// 	)
+			// }
 			y += 1
 		}
 		x += 1

@@ -10,6 +10,7 @@ import "core:slice"
 import "core:sync"
 import "core:sys/info"
 import "core:thread"
+import "trace"
 
 _is_threaded :: thread.IS_SUPPORTED
 
@@ -170,6 +171,11 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 }
 
 _accel_subset_thread :: proc(t: ^thread.Thread) {
+	when trace._instrumentation {
+		spall_buffer = spall.buffer_create(spall_buffer_backing, u32(sync.current_thread_id()))
+		spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+	}
+
 	data := (^TaskData)(t.data)
 	context.temp_allocator = _task_runners[t.user_index].allocator
 	sem := &_task_runners[t.user_index].lock

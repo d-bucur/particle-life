@@ -112,7 +112,6 @@ fill_rand_weights :: proc(scene: ^Scene) {
 	for &row, i in scene.weights {
 		for &v, j in row {
 			v = rand.float32() * 2 - 1
-			// v = 1 if i == j else -1
 		}
 	}
 }
@@ -131,6 +130,10 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 	for &p in &scene.particles {
 		p.pos += dt * (p.vel + p.accel * dt_half)
 		wrap_position(&p.pos, scene.size)
+
+		when _visual_debug {
+			rl.DrawLineV(p.pos, p.pos + p.accel / 100, scene.color_map[p.cluster])
+		}
 
 		p.old_accel = p.accel
 		p.accel = {0, 0}
@@ -151,7 +154,6 @@ update_scene :: proc(scene: ^Scene, dt: f32) {
 		// p.vel.x = math.clamp(p.vel.x, -max_velocity, max_velocity)
 		// p.vel.y = math.clamp(p.vel.y, -max_velocity, max_velocity)
 	}
-
 }
 
 distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 {
