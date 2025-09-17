@@ -45,9 +45,6 @@ update :: proc() {
 	defer rl.EndDrawing()
 	rl.ClearBackground(_background_color)
 
-	// MAYBE try fade out effect
-	rl.ClearBackground(_background_color)
-
 	rl.BeginMode2D(_camera)
 	cleanup_particles(&_scene, f32(rl.GetTime()))
 	start := time.tick_now()

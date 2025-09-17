@@ -167,12 +167,10 @@ distance_wrapped :: #force_inline proc(a: Vec2, b: Vec2, scene: ^Scene) -> Vec2 
 }
 
 wrap_position :: #force_inline proc "contextless" (pos: ^Vec2, size: Vec2) {
-	// MAYBE re-add margins
-	margin :: 0
-	if (pos.x >= size.x + margin) do pos.x -= size.x - margin
-	else if (pos.x < -margin) do pos.x += size.x + margin
-	if (pos.y >= size.y + margin) do pos.y -= size.y - margin
-	else if (pos.y < -margin) do pos.y += size.y + margin
+	if (pos.x >= size.x) do pos.x -= size.x
+	else if (pos.x < 0) do pos.x += size.x
+	if (pos.y >= size.y) do pos.y -= size.y
+	else if (pos.y < 0) do pos.y += size.y
 
 	// BUG can still assert if diff > size (ie. when minimizing the game, or very fast speeds)
 	// worth it to do division here?

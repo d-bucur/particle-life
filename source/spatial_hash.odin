@@ -78,7 +78,7 @@ spatial_rebuild :: proc(spatial: ^SpatialIndex, particles: [dynamic]Particle) {
 		[dynamic][dynamic]int,
 		spatial.grid_size.x * spatial.grid_size.y,
 	)
-	// IMPROV clear and reuse same arrays from previous frame
+	// IMPROV minor: clear and reuse same arrays from previous frame
 	// >50% of time spent on reserving arrays
 	for &tile in spatial.grid {
 		reserve(&tile, avg_particles)
@@ -102,7 +102,6 @@ spatial_query :: proc(
 
 	corner1_unwrapped := spatial_pos(spatial, pos - {radius, radius}, false)
 	corner2_unwrapped := spatial_pos(spatial, pos + {radius, radius}, false)
-	// IMPROV clamp diff to max world size for worst case scenario
 	diff := corner2_unwrapped - corner1_unwrapped
 	corner_start := spatial_pos(spatial, pos - {radius, radius})
 
