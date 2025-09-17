@@ -23,7 +23,6 @@ _target_tile_ratio: f32 = 0.3 // tiles in spatial grid try to be this ratio of t
 create_spatial :: proc(world_size: Vec2, dist_max: f32) -> SpatialIndex {
 	preferred := dist_max * _target_tile_ratio
 	fits := world_size / preferred
-	// TODO ceil instead to resolve issue at query border?
 	fits = {math.floor(fits.x), math.floor(fits.y)} // no array programming bruh?
 	tile_size := world_size / fits
 	return SpatialIndex {
@@ -35,7 +34,6 @@ create_spatial :: proc(world_size: Vec2, dist_max: f32) -> SpatialIndex {
 		},
 		world_size = world_size,
 	}
-	// leaks initial array memory??
 }
 
 spatial_pos :: proc "contextless" (

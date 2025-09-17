@@ -2,6 +2,7 @@
 - mobile version has scaling issues
 
 # features
+- change number of clusters at runtime
 - genetic evolution of weights, collisions to make particles fight etc. should be separate branch
 - better ui
 

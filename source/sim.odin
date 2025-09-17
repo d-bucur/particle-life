@@ -21,7 +21,7 @@ Particle :: struct {
 _target_particle_count: f32 = 300 // has to be float to work with raygui
 max_clusters :: 4
 max_velocity :: 2 // not used currently
-max_accel :: 5000
+max_accel :: 7000
 
 Scene :: struct {
 	// IMPROV turning into #soa doesn't improve perf at all??
@@ -54,9 +54,9 @@ init_scene_static :: proc(scene: ^Scene) {
 	scene.params = SimParams {
 		friction   = 0.5,
 		force_mult = 0.1,
-		eq_ratio   = 0.3,
-		dist_max   = 200,
-		life_time  = 20,
+		eq_ratio   = 0.4,
+		dist_max   = 150,
+		life_time  = 60,
 	}
 	scene.spatial = create_spatial(scene.size, scene.params.dist_max)
 }
