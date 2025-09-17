@@ -41,7 +41,7 @@ draw_ui :: proc(scene: ^Scene) {
 	rl.GuiSlider(_layout(4), "", "equilibrium dist", &scene.params.eq_ratio, 0.001, 1)
 
 	dist_max := scene.params.dist_max
-	rl.GuiSlider(_layout(5), "", "max dist", &dist_max, 1, 800)
+	rl.GuiSlider(_layout(5), "", "max dist", &dist_max, 50, _scene.size.y / 2)
 	if dist_max != scene.params.dist_max {
 		scene.params.dist_max = dist_max
 		_scene.spatial = create_spatial(_scene.size, _scene.params.dist_max)
@@ -73,11 +73,6 @@ draw_ui :: proc(scene: ^Scene) {
 		log.infof("%v", _target_tile_ratio)
 	}
 
-	// move particle on click
-	if rl.IsMouseButtonPressed(.LEFT) {
-		_scene.particles[0].pos = rl.GetMousePosition()
-	}
-
 	// draw weights
 	// sz: f32 = math.min(_ui_width / max_clusters, 30) // variable size
 	sz: f32 = 30
@@ -88,7 +83,6 @@ draw_ui :: proc(scene: ^Scene) {
 		for j in 0 ..< max_clusters {
 			rect := rl.Rectangle{sz * 1.5 + f32(i) * sz, sz * 1.5 + f32(j) * sz, sz, sz}
 			weight := &scene.weights[i][j]
-			// weight := i32(weight2^ * 10)
 			color := rl.Fade(
 				rl.ColorFromHSV(linalg.mix(f32(0), 120, (weight^ + 1) / 2), 0.5, 1),
 				0.6,

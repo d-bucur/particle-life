@@ -30,7 +30,7 @@ init :: proc() {
 		trace.spall_context_create()
 		trace.buffer_create()
 	}
-	
+
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
 	// init_scene_test(&_scene, 2)
@@ -69,11 +69,17 @@ update :: proc() {
 }
 
 handle_input :: proc() {
+	// move particle on click
+	if rl.IsMouseButtonPressed(.RIGHT) {
+		_scene.particles[0].pos = rl.GetMousePosition()
+	}
+
 	speed :: 10
 	if rl.IsKeyDown(.W) do _camera_offset += {0, speed}
 	if rl.IsKeyDown(.S) do _camera_offset += {0, -speed}
 	if rl.IsKeyDown(.A) do _camera_offset += {speed, 0}
 	if rl.IsKeyDown(.D) do _camera_offset += {-speed, 0}
+	if rl.IsMouseButtonDown(.LEFT) do _camera_offset += rl.GetMouseDelta()
 	wrap_position(&_camera_offset, _scene.size)
 
 	zoom_speed :: 0.01

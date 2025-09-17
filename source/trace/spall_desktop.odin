@@ -1,14 +1,11 @@
+#+build !wasm32
 package trace
 
 import "core:sync"
 import "base:runtime"
 import "core:prof/spall"
 
-when ODIN_ARCH != .wasm32 {
-	IS_TRACING :: false // enable this for tracing on desktop
-} else {
-	IS_TRACING :: false
-}
+IS_TRACING :: false
 
 when IS_TRACING {
 	// Tracing stuff with spall

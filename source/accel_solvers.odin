@@ -107,8 +107,8 @@ TaskData :: struct {
 }
 
 init_solvers :: proc() {
-	thread_count := info.cpu.logical_cores
 	when IS_THREADED {
+		thread_count := info.cpu.logical_cores
 		resize(&_task_runners, thread_count)
 		resize(&_task_data, thread_count)
 
