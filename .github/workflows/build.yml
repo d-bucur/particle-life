@@ -1,12 +1,18 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: 'ref to build'
+        required: true
+        default: 'main'
+  # push:
+  #   branches:
+  #     - main
+  # pull_request:
+  #   branches:
+  #     - main
 
 
 jobs:
