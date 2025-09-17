@@ -12,7 +12,6 @@ PosGrid :: distinct [2]int
 SpatialIndex :: struct {
 	// each tile in the grid has a list of indices to the particle array
 	grid:           [dynamic][dynamic]int,
-	// world_size = tile_size * grid_size
 	tile_size:      Vec2,
 	tile_size_half: Vec2,
 	world_size:     Vec2,
@@ -22,9 +21,9 @@ SpatialIndex :: struct {
 _target_tile_ratio: f32 = 0.3 // tiles in spatial grid try to be this ratio of the dist_max
 
 create_spatial :: proc(world_size: Vec2, dist_max: f32) -> SpatialIndex {
-	// world_size should always be a multiple of tile_size, otherwise weird things happen at the borders
 	preferred := dist_max * _target_tile_ratio
 	fits := world_size / preferred
+	// TODO ceil instead to resolve issue at query border?
 	fits = {math.floor(fits.x), math.floor(fits.y)} // no array programming bruh?
 	tile_size := world_size / fits
 	return SpatialIndex {
@@ -54,7 +53,7 @@ spatial_pos :: proc "contextless" (
 }
 
 // avoid extra modf of floor(), works in most cases
-_fast_int :: proc "contextless" (v: f32) -> int {
+_fast_int :: #force_inline proc "contextless" (v: f32) -> int {
 	return int(v) if v >= 0 else int(v - 1)
 }
 
@@ -135,6 +134,5 @@ spatial_query :: proc(
 		}
 		x += 1
 	}
-
 	return result
 }

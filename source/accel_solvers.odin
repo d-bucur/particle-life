@@ -12,11 +12,11 @@ import "core:sys/info"
 import "core:thread"
 import "trace"
 
-_is_threaded :: thread.IS_SUPPORTED
+IS_THREADED :: thread.IS_SUPPORTED
 
 // Accumulate acceleration for each particle
 accumulate_accel :: proc(scene: ^Scene) {
-	when _is_threaded {
+	when IS_THREADED {
 		_accumulate_accel_multi_thread(scene)
 	} else {
 		_accumulate_accel_single_thread(scene)
@@ -56,7 +56,7 @@ _accel_per_tile :: #force_inline proc(
 		for tile_key in tiles_in_range {
 			for j in scene.spatial.grid[tile_key] {
 				// if single threaded then do symmetrical pass
-				when _is_threaded {
+				when IS_THREADED {
 					if i == j do continue
 				} else {
 					if i < j do continue
@@ -72,7 +72,7 @@ _accel_per_tile :: #force_inline proc(
 					delta_norm * _calc_force(r, weight, scene.params.eq_ratio, scene.cached.er) // no mass
 
 				// if single threaded then apply symmetric force to other particle now
-				when !_is_threaded {
+				when !IS_THREADED {
 					weight = scene.weights[other.cluster][p.cluster]
 					other.accel -=
 						delta_norm *
@@ -107,8 +107,8 @@ TaskData :: struct {
 }
 
 init_solvers :: proc() {
-	when thread.IS_SUPPORTED {
-		thread_count := info.cpu.logical_cores
+	thread_count := info.cpu.logical_cores
+	when IS_THREADED {
 		resize(&_task_runners, thread_count)
 		resize(&_task_data, thread_count)
 
@@ -121,7 +121,7 @@ init_solvers :: proc() {
 			log.infof("Starting thread %v", runner.thread.user_index)
 			thread.start(runner.thread)
 		}
-		log.infof("Thread pool intitialized with %v threads", thread_count)
+		log.infof("Thread pool initialized with %v threads", thread_count)
 	}
 }
 
@@ -171,10 +171,7 @@ _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
 }
 
 _accel_subset_thread :: proc(t: ^thread.Thread) {
-	when trace._instrumentation {
-		spall_buffer = spall.buffer_create(spall_buffer_backing, u32(sync.current_thread_id()))
-		spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
-	}
+	when trace.IS_TRACING do trace.buffer_scoped()
 
 	data := (^TaskData)(t.data)
 	context.temp_allocator = _task_runners[t.user_index].allocator

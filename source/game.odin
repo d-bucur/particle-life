@@ -26,12 +26,16 @@ init :: proc() {
 		size = {1024, 600},
 	}
 	rl.InitWindow(i32(_scene.size.x), i32(_scene.size.y), "Particle life")
+	when trace.IS_TRACING {
+		trace.spall_context_create()
+		trace.buffer_create()
+	}
+	
 	init_scene_static(&_scene)
 	init_scene_rand(&_scene)
 	// init_scene_test(&_scene, 2)
 	init_render()
 	init_solvers()
-	trace.spall_init()
 }
 
 update :: proc() {
@@ -95,7 +99,10 @@ set_scene_size :: proc(w, h: i32) {
 
 shutdown :: proc() {
 	rl.CloseWindow()
-	trace.spall_destroy()
+	when trace.IS_TRACING {
+		trace.buffer_destroy()
+		trace.spall_context_destroy()
+	}
 	destroy_solvers()
 	delete(_scene.particles)
 }
