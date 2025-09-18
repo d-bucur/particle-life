@@ -187,5 +187,6 @@ _accel_subset_thread :: proc(t: ^thread.Thread) {
 		intrinsics.atomic_sub(sem, 1)
 		sync.futex_signal(sem)
 		free_all(_task_runners[t.user_index].allocator)
+		when trace.IS_TRACING do trace.buffer_flush()
 	}
 }

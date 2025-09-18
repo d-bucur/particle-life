@@ -39,17 +39,16 @@ init :: proc() {
 }
 
 update :: proc() {
+	rl.BeginDrawing()
+	defer rl.EndDrawing()
+	rl.BeginMode2D(_camera)
+	rl.ClearBackground(_background_color)
+
 	if rl.IsWindowResized() do set_scene_size(rl.GetScreenWidth(), rl.GetScreenHeight())
 	rebuild_cache(&_scene)
-
 	handle_input()
 
 	// Update and redraw particles in the scene
-	rl.BeginDrawing()
-	defer rl.EndDrawing()
-	rl.ClearBackground(_background_color)
-
-	rl.BeginMode2D(_camera)
 	cleanup_particles(&_scene, f32(rl.GetTime()))
 	start := time.tick_now()
 	update_scene(&_scene, rl.GetFrameTime())
@@ -66,6 +65,7 @@ update :: proc() {
 
 	// Anything allocated using temp allocator is invalid after this.
 	free_all(context.temp_allocator)
+	when trace.IS_TRACING do trace.buffer_flush()
 }
 
 handle_input :: proc() {

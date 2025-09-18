@@ -43,6 +43,10 @@ when IS_TRACING {
 		delete(spall_buffer_backing)
 	}
 
+	buffer_flush :: proc() {
+		spall.buffer_flush(&spall_ctx, &spall_buffer)
+	}
+
 	// Automatic profiling of every procedure:
 
 	@(instrumentation_enter)
