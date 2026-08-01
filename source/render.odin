@@ -7,7 +7,7 @@ import "core:math/linalg"
 import "core:strings"
 import rl "vendor:raylib"
 
-particle_radius :: 3
+// particle_radius :: 3
 _visual_debug :: false
 _particle_texture: rl.RenderTexture2D
 _background_color := rl.ColorFromHSV(0, 0.1, 0.1)
@@ -16,19 +16,36 @@ _camera := rl.Camera2D {
 }
 
 init_render :: proc() {
-	sz: i32 = particle_radius * 3
+	radius: i32 = 5
+	sz: i32 = radius * 2
 	_particle_texture = rl.LoadRenderTexture(sz, sz)
 	rl.BeginTextureMode(_particle_texture)
 	// rl.ClearBackground(rl.WHITE) // square particle
-	rl.DrawCircleGradient(particle_radius, particle_radius, particle_radius, rl.GRAY, rl.WHITE)
+	rl.DrawCircleGradient(radius, radius, f32(radius), rl.GRAY, rl.WHITE)
 	rl.EndTextureMode()
 }
 
 render_scene :: proc(scene: Scene) {
+	source := rl.Rectangle {
+		0,
+		0,
+		f32(_particle_texture.texture.width),
+		f32(_particle_texture.texture.height),
+	}
 	for p in scene.particles {
-		pos := p.pos - particle_radius + _camera_offset
+		pos := p.pos - p.radius + _camera_offset
+		sz := p.radius + p.radius
 		wrap_position(&pos, scene.size)
-		rl.DrawTextureV(_particle_texture.texture, pos, scene.color_map[p.cluster])
+		// rl.DrawTextureV(_particle_texture.texture, pos, scene.color_map[p.cluster])
+		dest := rl.Rectangle{p.pos.x - p.radius, p.pos.y - p.radius, sz, sz}
+		rl.DrawTexturePro(
+			_particle_texture.texture,
+			source,
+			dest,
+			{p.radius, p.radius},
+			0,
+			scene.color_map[p.cluster],
+		)
 	}
 	draw_debug(scene)
 }

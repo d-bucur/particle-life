@@ -4,6 +4,7 @@ import "core:log"
 import "core:math"
 import la "core:math/linalg"
 import "core:math/rand"
+import "base:runtime"
 
 import rl "vendor:raylib"
 
@@ -16,6 +17,7 @@ Particle :: struct {
 	old_accel:  Vec2,
 	cluster:    i32,
 	birth_time: f32,
+	radius:     f32,
 }
 
 _target_particle_count: f32 = 300 // has to be float to work with raygui
@@ -106,6 +108,16 @@ randomize_particle :: #force_inline proc(p: ^Particle, scene: Scene, time: f32) 
 	p.pos = {rand.float32() * scene.size.x, rand.float32() * scene.size.y}
 	p.vel = {rand.float32() * 1, rand.float32() * 1}
 	p.birth_time = time
+	p.radius = 10
+}
+
+remove_particle :: proc (scene: ^Scene, idx: int) {
+	scene.particles[idx] = pop(&scene.particles)
+	// new_len := len(scene.particles)-1
+	// scene.particles[idx] = scene.particles[new_len]
+	// arr := (^runtime.Raw_Dynamic_Array)(&scene.particles)
+	// arr.len = new_len
+	// resize(&scene.particles, new_len)
 }
 
 fill_rand_weights :: proc(scene: ^Scene) {

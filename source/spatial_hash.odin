@@ -60,6 +60,7 @@ spatial_pos_to_key :: #force_inline proc(spatial: SpatialIndex, pos: PosGrid) ->
 	// assert(pos.x < spatial.grid_size.x)
 	// assert(pos.y >= 0)
 	// assert(pos.y < spatial.grid_size.y)
+	// IMPROV try z order curve for better locality https://en.wikipedia.org/wiki/Z-order_curve
 	return pos.y * spatial.grid_size.x + pos.x
 }
 

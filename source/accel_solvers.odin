@@ -1,5 +1,6 @@
 package game
 
+import "core:sort"
 import "base:intrinsics"
 import "core:fmt"
 import "core:log"
@@ -12,7 +13,7 @@ import "core:sys/info"
 import "core:thread"
 import "trace"
 
-IS_THREADED :: thread.IS_SUPPORTED
+IS_THREADED :: false // thread.IS_SUPPORTED
 
 // Accumulate acceleration for each particle
 accumulate_accel :: proc(scene: ^Scene) {
@@ -38,6 +39,20 @@ _accumulate_accel_single_thread :: proc(scene: ^Scene) {
 	for particles_in_tile, tile_idx in &scene.spatial.grid {
 		_accel_per_tile(particles_in_tile, tile_idx, scene)
 	}
+	_apply_deletions(scene, _staged_delete[:])
+}
+
+@(thread_local)
+_staged_delete: [dynamic]int
+
+_apply_deletions :: proc(scene: ^Scene, indices: []int) {
+	sort.merge_sort(_staged_delete[:])
+	last_idx := -1
+	#reverse for i in _staged_delete {
+		if last_idx != i do remove_particle(scene, i)
+		last_idx = i
+	}
+	clear(&_staged_delete)
 }
 
 _accel_per_tile :: #force_inline proc(
@@ -59,11 +74,16 @@ _accel_per_tile :: #force_inline proc(
 				when IS_THREADED {
 					if i == j do continue
 				} else {
-					if i < j do continue
+					if i <= j do continue
 				}
 				other := &scene.particles[j]
 				delta := distance_wrapped(other.pos, p.pos, scene)
 				l := la.length(delta)
+				if l < p.radius + other.radius {
+					// fmt.printfln("Collision")
+					append_elems(&_staged_delete, i, j)
+				}
+
 				delta_norm := delta / l if l > 0.1 else 0
 				r := l / scene.params.dist_max
 
@@ -123,6 +143,7 @@ init_solvers :: proc() {
 		}
 		log.infof("Thread pool initialized with %v threads", thread_count)
 	}
+	// deleted_staged = make(map[int]struct{})
 }
 
 destroy_solvers :: proc() {
@@ -132,6 +153,7 @@ destroy_solvers :: proc() {
 	}
 	delete(_task_data)
 	delete(_task_runners)
+	delete(_staged_delete)
 }
 
 _accumulate_accel_multi_thread :: proc(scene: ^Scene) {
